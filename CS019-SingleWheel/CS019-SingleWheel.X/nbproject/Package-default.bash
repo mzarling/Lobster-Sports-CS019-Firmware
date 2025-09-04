@@ -10,9 +10,9 @@ CND_CONF=default
 CND_DISTDIR=dist
 TMPDIR=build/${CND_CONF}/${IMAGE_TYPE}/tmp-packaging
 TMPDIRNAME=tmp-packaging
-OUTPUT_PATH=dist/${CND_CONF}/${IMAGE_TYPE}/CS019B05-SingleWheel.X.${IMAGE_TYPE}.${OUTPUT_SUFFIX}
-OUTPUT_BASENAME=CS019B05-SingleWheel.X.${IMAGE_TYPE}.${OUTPUT_SUFFIX}
-PACKAGE_TOP_DIR=cs019b05-singlewheel.x/
+OUTPUT_PATH=dist/${CND_CONF}/${IMAGE_TYPE}/CS019-SingleWheel.X.${IMAGE_TYPE}.${OUTPUT_SUFFIX}
+OUTPUT_BASENAME=CS019-SingleWheel.X.${IMAGE_TYPE}.${OUTPUT_SUFFIX}
+PACKAGE_TOP_DIR=cs019-singlewheel.x/
 
 # Functions
 function checkReturnCode
@@ -57,15 +57,15 @@ mkdir -p ${TMPDIR}
 
 # Copy files and create directories and links
 cd "${TOP}"
-makeDirectory ${TMPDIR}/cs019b05-singlewheel.x/bin
+makeDirectory ${TMPDIR}/cs019-singlewheel.x/bin
 copyFileToTmpDir "${OUTPUT_PATH}" "${TMPDIR}/${PACKAGE_TOP_DIR}bin/${OUTPUT_BASENAME}" 0755
 
 
 # Generate tar file
 cd "${TOP}"
-rm -f ${CND_DISTDIR}/${CND_CONF}/package/cs019b05-singlewheel.x.tar
+rm -f ${CND_DISTDIR}/${CND_CONF}/package/cs019-singlewheel.x.tar
 cd ${TMPDIR}
-tar -vcf ../../../../${CND_DISTDIR}/${CND_CONF}/package/cs019b05-singlewheel.x.tar *
+tar -vcf ../../../../${CND_DISTDIR}/${CND_CONF}/package/cs019-singlewheel.x.tar *
 checkReturnCode
 
 # Cleanup

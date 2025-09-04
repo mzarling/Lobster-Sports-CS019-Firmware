@@ -1,0 +1,2929 @@
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE  1
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00001 
+                      00002         list      p=16f73            ; list directive to define processor
+                      00003         #include <p16f73.inc>        ; processor specific variable definitions
+                      00001         LIST
+                      00002 
+                      00003 ;==========================================================================
+                      00004 ; Build date : Jan 06 2020
+                      00005 ;  MPASM PIC16F73 processor include
+                      00006 ; 
+                      00007 ;  (c) Copyright 1999-2020 Microchip Technology, All rights reserved
+                      00008 ;==========================================================================
+                      00009 
+                      00456         LIST
+                      00004 
+                      00005 ;       __CONFIG   _CP_OFF & _WDT_ON & _BODEN_ON & _PWRTE_ON & _HS_OSC
+2007   3FE6           00006         __CONFIG   _CP_ALL & _WDT_ON & _BODEN_ON & _PWRTE_ON & _HS_OSC
+                      00007 
+                      00008 ; '__CONFIG' directive is used to embed configuration data within .asm file.
+                      00009 ; The lables following the directive are located in the respective .inc file.
+                      00010 ; See respective data sheet for additional information on configuration word.
+                      00011 
+                      00012 ;*********************************************************************
+                      00013 ; Definitions
+                      00014 ;*********************************************************************
+                      00015 ;
+  000000A8            00016 MSEC5_LSB       equ     0xa8    
+                      00017 ;NORMAL 
+  00000061            00018 MSEC5_MSB       equ     0x61
+                      00019 
+                      00020 ;SIM MSEC5_MSB  equ     0xfe
+                      00021 
+                      00022 ; msec5 init value to count up to 1 second
+                      00023 ; 200 5msec ticks (255 - 200)
+                      00024 ;TICK_CNT       equ     0x37
+  00000057            00025 TICK_CNT        equ     0x57
+                      00026 ; remote block init value to count down to 1/2 second
+  00000053            00027 BLOCK_CNT       equ     0x53
+                      00028 ; I/O, Interrupt and Option Definitions
+                      00029 ;
+                      00030 ;OPTIONVAL      equ     88h             ;10001000b: portB no pull-up, tmr0 int
+  000000C8            00031 OPTIONVAL       equ     0c8h            ;11001000b: portB no pull-up,  RB0/INT rising edge, tmr0 int
+                      00032 ;OPTIONVAL      equ     088h            ;11001000b: portB no pull-up,  RB0/INT falling edge, tmr0 int
+  000000A0            00033 INTCONVAL       equ     0a0h            ; set GIE, TOIE
+                      00034 
+                      00035                                         ; port A:
+  00000000            00036 SPINPBIT        equ     00h             ; analog input for ball spin     a/d channel 0
+  00000001            00037 SPDBIT          equ     01h             ; analog input for ball speed    a/d channel 1
+  00000002            00038 BATTERY         equ     02h             ; analog input for battery level a/d channel 2
+  00000003            00039 FEEDBIT         equ     03h             ; analog input for feed rate     a/d channel 3
+  00000004            00040 SWEEPEN         equ     04h             ; analog input for sweep enable switch a/d channel 4 (PORTA bit 
+                            5)
+  0000003F            00041 TRISAVAL        equ     3fh             ;00111111b: A0 - A5 as input
+  00000002            00042 ADCON1VAL       equ     2               ; RA0,1,2,3,5 are analog        ;MJZ DEBUG, COMMENTED THIS LINE
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE  2
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00043 ;ADCON1VAL      equ     6               ;MJZ DEBUG, ADDED THIS LINE, CHANGED ALL ANALOG INPUTS TO DIGITA
+                            L INPUTS
+  00000081            00044 ADCON0VAL       equ     081h            ;10000001b: fosc/32, channel 0
+  00000004            00045 LINESWBIT       equ 04h                 ;MJZ ADDED LINE, 2-LINE LIMIT SWITCH INPUT BIT, LOW=SWITCH ON, H
+                            IGH=SWITCH OFF
+                      00046 
+                      00047                                         ; port B:
+  000000F1            00048 TRISBVAL        equ     0f1h            ;11110001b: B1,B2,B3 as output
+  00000001            00049 RED_LED         equ     1               ;  bit 1 controls red led
+  00000002            00050 GREEN_LED       equ     2               ;  bit 2 controls green led
+  00000003            00051 FEED_LED        equ     3               ;  bit 3 controls feed led
+  00000002            00052 RED_LED_ON      equ     2               ;  value to turn on red led
+  00000004            00053 GREEN_LED_ON    equ     4               ;  value to turn on green led
+                      00054 
+                      00055                                         ; port C:
+  00000000            00056 PWMOUTBIT       equ     00h             ; software PWM output for feed motor
+  00000003            00057 SWEEP_EN        equ     03h             ; sweep motor enable (digital out)
+  00000004            00058 ELEV_EN         equ     04h             ; elevation motor enable (digital out)
+  00000040            00059 BEEP_OFF        equ     0x40            ; bit 6 on disables beep
+  000000A0            00060 TRISCVAL        equ     0a0h            ;10100000b: C7,C5 as input
+  00000002            00061 PWM1            equ     2
+  00000001            00062 PWM2            equ     1
+                      00063 
+  00000030            00064 FLASH_TIME      equ     30h
+  00000004            00065 PAUSE_TIME      equ     4
+                      00066 
+                      00067 ;***** VARIABLE DEFINITIONS
+  00000020            00068 w_temp          equ     0x20            ; variable used for context saving 
+  00000021            00069 status_temp     equ     0x21            ; variable used for context saving
+  00000022            00070 temp            equ     0x22
+  00000023            00071 pwr_on_code     EQU     0x23
+  00000024            00072 t_top_pwm       equ     0x24            ; target value for top PWM
+  00000025            00073 c_top_pwm       equ     0x25            ; current value for top PWM
+  00000026            00074 t_bot_pwm       equ     0x26            ; target value for bot PWM
+  00000027            00075 c_bot_pwm       equ     0x27            ; current value for bot PWM
+  00000028            00076 top_inited      equ     0x28            ; top motor init done
+  00000029            00077 bot_inited      equ     0x29            ; bottom motor init done
+  0000002A            00078 feed_inited     equ     0x2a            ; feed motor init done
+  0000002B            00079 sweep_inited    equ     0x2b            ; sweep motor init done
+                      00080 
+  0000002C            00081 stackw          equ     0x2c            ; stack to push/pop the W-register
+  0000002D            00082 stacks          equ     0x2d            ; stack to push/pop the STATUS-reg
+  0000002E            00083 counter         equ     0x2e            ; counter: input frequency
+                      00084                                         ;   f1 = crystalfreq. / 4 / 255
+  0000002F            00085 counter2        equ     0x2f            ; counter2: input frequency
+                      00086                                         ;   f2 = f1 / 128
+  00000030            00087 pwmdesired      equ     0x30            ; target PWM of feed motor value 0..255
+  00000031            00088 pwmmax          equ     0x31            ; register to support generation PWM
+  00000032            00089 pwmhelp         equ     0x32            ; used as temp storage of pwmdesired
+                      00090 
+  00000033            00091 a2d_chan        equ     0x33            ; next channel to acquire a2d
+                      00092 
+  00000034            00093 seconds         equ     0x34            ; seconds since poweron
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE  3
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+  00000035            00094 msec5           equ     0x35            ; number of 5msec intrs
+  00000036            00095 init_done       equ     0x36            ; power up initialization done
+  00000037            00096 soft_pwm        equ     0x37            ; software PWM module enabled
+                      00097 
+  00000038            00098 spin_a2d        equ     0x38            ; a2d value from a2d chan 0
+  00000039            00099 spd_a2d         equ     0x39            ; a2d value from a2d chan 1
+  0000003A            00100 bat_a2d         equ     0x3a            ; a2d value from a2d chan 2
+  0000003B            00101 feed_a2d        equ     0x3b            ; a2d value from a2d chan 3
+  0000003C            00102 sweep_a2d       equ     0x3c            ; a2d value from a2d chan 4
+                      00103 
+  0000003D            00104 calc_pwm        equ     0x3d            ; temporarily variable for calculating PWM
+  0000003E            00105 delta_c         equ     0x3e            ; temp var
+  0000003F            00106 delta_s         equ     0x3f            ; temp var
+                      00107 
+  00000040            00108 wait_cnt        equ     0x40            ; counter for wait routine
+                      00109 ;err_no         equ     0x41            ; motor error number    ;MJZ COMMENTED THIS LINE
+                      00110                                         ; 0= no error, 2= feed motor error, 3= top serve motor error
+                      00111                                         ;              4= bottom serve err, 5= sweep motor error
+  00000041            00112 err_no          equ     0x41            ; motor error number    ;MJZ ADDED THIS LINE
+                      00113                                         ; 0= no error, 2= feed motor error, 3= top serve motor error
+                      00114                                         ;              4= bottom serve err, 5= POWER OFF ERROR
+  00000042            00115 flash_code      equ     0x42            ; local variable used by motor_err()
+  00000043            00116 led_bits        equ     0x43            ; memory copy of LED bits on PORTB
+  00000044            00117 rbif_wait       equ     0x44            ; delay for rechecking rbif
+                      00118 
+  00000045            00119 power_level     equ     0x45            ; power level for set led: 0 is > 2.6v, 1 is > 2.5V, 2 is > 2.4v
+                            , 3 is < 2.4v
+  00000046            00120 power_level_r   equ     0x46            ; lowest power level for this 16 second period
+  00000047            00121 power_level_tmp equ     0x47            ; temp var 
+  00000048            00122 delay           equ     0x48            ; delay var
+                      00123 
+  00000049            00124 mult1           equ     0x49            ; temp var for mult_sub routine
+  0000004A            00125 mult2           equ     0x4a            ; temp var for mult_sub routine
+  0000004B            00126 mult3           equ     0x4b            ; temp var for mult_sub routine
+  0000004C            00127 rbif_bits       equ     0x4c            ; bit mask for checking motor errors
+  0000004D            00128 sweep_is_on     equ     0x4d            ; sweep motor on flag
+  0000004E            00129 r1              equ     0x4e            ; result of mult1 x mult2
+  0000004F            00130 r2              equ     0x4f            ; result of mult1 x mult2
+                      00131 
+  00000050            00132 remote_toggle   equ     0x50            ; toggle bits for remote control
+  00000000            00133 FEED_BIT        equ     0
+  00000001            00134 SWEEP_BIT       equ     1
+  00000005            00135 REMOTE_BIT      equ     5
+  00000001            00136 FEED_TOGGLE     equ     0x01            ; bit 0:  0 = feed off, 1 = feed on
+  00000002            00137 SWEEP_TOGGLE    equ     0x02            ; bit 1:  0 = sweep off, 1 = sweep on
+  00000020            00138 REMOTE_ON       equ     0x20            ; bit 5:  0 = remote disabled, 1= enabled
+  00000051            00139 remote_block    equ     0x51            ; time to block remote transmission input
+  00000052            00140 FF_count        equ     0x52            ; remaining FF's to send for beep
+  00000053            00141 last_sweep      equ     0x53            ;
+  00000054            00142 beep_count      equ     0x54            ; DEBUG
+                      00143 
+                      00144 
+                      00145 
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE  4
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+  00000055            00146 linesw_toggle   equ 0x55        ;MJZ ADDED THIS LINE, BIT 4 IS 2-LINE SWITCH TOGGLE BIT
+  00000056            00147 sweep_timer             equ 0x56        ;MJZ ADDED THIS LINE, REACHES 0 MEANS NO 2-LINE SWITCH DETECTED 
+                            BETWEEN SIDE TO SIDE SWEEPS
+  00000057            00148 feed_rate_type  equ 0x57        ;MJZ ADDED THIS LINE, BIT 0=0 FOR NORMAL FEED RATE ALGORITHM, 
+                      00149                                                         ;MJZ ADDED THIS LINE, BIT 0=1 FOR RESTRICTED MAX
+                             RATE IN 2-LINE MODE
+                      00150 
+                      00151 
+                      00152 
+                      00153 ;----------------------------------------------------------------------
+                      00154 ; PWM-module constant
+  00000016            00155 PWMADJUSTVAL    equ     .22
+                      00156         ; correction number, defined by the following factors:
+                      00157         ; time from timer interrupt to executing PC 004 + 3 cycles
+                      00158         ; computing time from PC=004 to required edge   +18 cycles
+                      00159         ; lost timer cycles due to writing the time     + 2 cycles
+                      00160         ; cal desired PWM value to timer loading value  + 2 cycles
+                      00161         ; time from timer loading to gen required edge  - 1 cycle
+                      00162         ; valid value for hardware (unknown diff to the data sheet)
+                      00163         ; 3+18+2+2-1=22
+                      00164         ; value value for PICSIM version 5.11 (error of PICSIM):
+                      00165         ; 0+18+2+2-1=21
+  0000001D            00166 PWMMAXVAL       equ     .29
+                      00167         ; loading value for pwmmax
+                      00168         ; If n is the maximum length of a high pulse, which has to be
+                      00169         ; generated by the skipping method, then is PWMMAXVAL = n+1.
+                      00170         ; The max length of a low pulse using the skip method is n-1.
+                      00171 
+                      00172 
+                      00173 
+                      00174 ;**********************************************************************
+0000                  00175                 ORG     0x000             ; processor reset vector
+0000   018A           00176                 clrf    PCLATH            ; ensure page bits are cleared
+0001   2810           00177                 goto    main              ; go to beginning of program
+                      00178 
+                      00179 
+0004                  00180                 ORG     0x004             ; interrupt vector location
+0004   00A0           00181                 movwf   w_temp            ; save off current W register contents
+0005   0803           00182                 movf    STATUS,w          ; move status register into W register
+0006   1283           00183                 bcf     STATUS,RP0        ; ensure file register bank set to 0
+0007   00A1           00184                 movwf   status_temp       ; save off contents of STATUS register
+                      00185 
+                      00186 ; isr code can go here or be located as a call subroutine elsewhere
+0008   190B           00187                 btfsc   INTCON,T0IF      ; check for timer0 interrupt
+0009   2083           00188                 call    PwmInt
+                      00189 
+000A   1283           00190                 bcf     STATUS,RP0        ; ensure file register bank set to 0
+000B   0821           00191                 movf    status_temp,w     ; retrieve copy of STATUS register
+000C   0083           00192                 movwf   STATUS            ; restore pre-isr STATUS register contents
+000D   0EA0           00193                 swapf   w_temp,f
+000E   0E20           00194                 swapf   w_temp,w          ; restore pre-isr W register contents
+000F   0009           00195                 retfie                    ; return from interrupt
+                      00196 
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE  5
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0010                  00197 main
+                      00198 ; init code 
+                      00199         ;configuration of the PWM module
+0010   018B           00200         clrf    INTCON                  ; disable all intrs
+0011   0197           00201         clrf    CCP1CON                 ; CCP1 Module is off
+0012   019D           00202         clrf    CCP2CON                 ; CCP2 Module is off
+0013   0181           00203         clrf    TMR0                    ; reset timer
+0014   01B0           00204         clrf    pwmdesired              ; reset value of software PWM is 0
+0015   01A4           00205         clrf    t_top_pwm
+0016   01A6           00206         clrf    t_bot_pwm
+0017   01A5           00207         clrf    c_top_pwm
+0018   01A7           00208         clrf    c_bot_pwm
+0019   01A8           00209         clrf    top_inited
+001A   01A9           00210         clrf    bot_inited
+001B   01AA           00211         clrf    feed_inited
+001C   01AB           00212         clrf    sweep_inited
+                      00213 ;       clrw
+                      00214 ;       clrf    PORTC                   ; reset all output to 0 before port C
+001D   3040           00215         movlw   BEEP_OFF                ; reset all output to 0 except BEEP_OFF before port C
+001E   0087           00216         movwf   PORTC                   ; is changed from input to output 
+                      00217                                         ; to suppress an uncontrolled
+                      00218                                         ; spike
+001F   0186           00219         clrf    PORTB                   ; turn off red led, green led, and feed led
+0020   01A3           00220         clrf    pwr_on_code             ; reset type code
+0021   301D           00221         movlw   PWMMAXVAL               ; set support register
+0022   00B1           00222         movwf   pwmmax                  ;
+                      00223         ; configuration of the PIC
+0023   1683           00224         bsf     STATUS,RP0              ; register page 1
+0024   303F           00225         movlw   TRISAVAL                ; configure ...
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+0025   0085           00226         movwf   TRISA                   ; ...port A
+0026   30F1           00227         movlw   TRISBVAL                ; configure ...
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+0027   0086           00228         movwf   TRISB                   ; ...port B
+0028   30A0           00229         movlw   TRISCVAL                ; configure ...
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+0029   0087           00230         movwf   TRISC                   ; ...port C
+002A   3002           00231         movlw   ADCON1VAL               ; set inputs of ...
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+002B   009F           00232         movwf   ADCON1                  ; ...adc
+002C   30C8           00233         movlw   OPTIONVAL               ; configure ...
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+002D   0081           00234         movwf   OPTION_REG              ; ...PIC
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+002E   080E           00235         movf    PCON,w                  ; pick up NOT_POR and NOT_BOR
+002F   3903           00236         andlw   3
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+0030   148E           00237         bsf     PCON,NOT_POR
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+0031   140E           00238         bsf     PCON,NOT_BOR
+0032   1283           00239         bcf     STATUS,RP0              ; register page 0
+0033   00A3           00240         movwf   pwr_on_code
+0034   3018           00241         movlw   0x18                    ; get NOT_TO and NOT_PD
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE  6
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0035   0503           00242         andwf   STATUS,w
+0036   04A3           00243         iorwf   pwr_on_code,f                   ; or with NOT_POR and NOT_BOR
+0037   0064           00244         clrwdt
+                      00245 ;
+                      00246 ; init variables
+0038   01B4           00247         clrf    seconds
+0039   01B6           00248         clrf    init_done               ; power on init not done
+003A   01B7           00249         clrf    soft_pwm                ; software pwm module not enabled
+003B   01C3           00250         clrf    led_bits
+003C   30A8           00251         movlw   MSEC5_LSB               ; init  timer1 to count up to 5 msec
+003D   008E           00252         movwf   TMR1L
+003E   3061           00253         movlw   MSEC5_MSB
+003F   008F           00254         movwf   TMR1H
+0040   3001           00255         movlw   0x01                    ; enables TMR1, FOSC/4, 1:1 prescale
+0041   0090           00256         movwf   T1CON   
+0042   3057           00257         movlw   TICK_CNT                ; init msec5 so it will roll over after 1 second
+0043   00B5           00258         movwf   msec5
+                      00259 
+0044   01D6           00260         clrf    sweep_timer             ;MJZ ADDED THIS LINE
+0045   01D7           00261         clrf    feed_rate_type  ;MJZ ADDED THIS LINE
+                      00262 
+                      00263 
+                      00264 ; on power up
+                      00265 ;
+0046                  00266 at0sec
+0046   210B           00267         call    sec0init
+                      00268 ;       movlw   0xf8                    ; SIM ONLY
+                      00269 ;       movwf   msec5                   ; SIM ONLY
+                      00270 ; main idle loop
+                      00271 ;
+0047                  00272 idle
+0047   0064           00273         clrwdt                          ; toggle watchdog
+0048   1C0C           00274         btfss   PIR1,TMR1IF             ; wait for timer1 to overflow
+0049   2847           00275         goto    idle
+004A   30A8           00276         movlw   MSEC5_LSB               ; reset  timer1 to count up to 5 msec
+004B   008E           00277         movwf   TMR1L
+004C   3061           00278         movlw   MSEC5_MSB
+004D   008F           00279         movwf   TMR1H
+004E   100C           00280         bcf     PIR1,TMR1IF             ; clear timer1 overflow flag
+                      00281 ;       call    chk_rbif                ; check if RB7:RB4 pins changed - motors error  ;MJZ COMMENTED T
+                            HIS LINE
+004F   22D8           00282         call    chk_rbif                ;MJZ ADDED THIS LINE, CHECK IF RB7:RB4 PINS CHANGED - MOTOR ERRO
+                            RS OR POWER OFF
+0050   2467           00283         call    chk_intf                ;MJZ ADDED THIS LINE, CHECK FOR BALL DROPPED
+0051   2415           00284         call    chk_remote
+0052   243F           00285         call    chk_2linesw             ;MJZ ADDED LINE, CHECK IF 2-LINE LIMIT SWITCH IS ON, NEEDS TO BE
+                             CHECKED EVERY 5MS
+                      00286                                                         ;TO ENSURE STOP POSITION ACCURACY & CONSISTANCY
+0053   0FB5           00287         incfsz  msec5,f                 ; if msec5 overflowed,
+0054   2864           00288         goto    not_second
+                      00289 ;       movlw   0x55                    ; DEBUG
+                      00290 ;       btfss   remote_toggle,REMOTE_BIT        ; DEBUG
+                      00291 ;       call    putchar                 ; DEBUG
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE  7
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00292 
+Message[305]: Using default destination of 1 (file).
+0055   03D6           00293         decf    sweep_timer                     ;MJZ ADDED THIS LINE, SWEEP TIMER COUNTDOWN SECONDS
+                      00294 
+0056   1845           00295         btfsc   power_level,0           ;MJZ ADDED THIS LINE
+0057   2478           00296         call    toggle_green_led        ;MJZ ADDED THIS LINE, IF POWER_LEVEL=1 (OR 3), TOGGLE GREEN LED 
+                            (POWER_LEVEL 3 NEVER GETS HERE)
+0058   18C5           00297         btfsc   power_level,1           ;MJZ ADDED THIS LINE
+0059   247B           00298         call    toggle_red_led          ;MJZ ADDED THIS LINE, IF POWER_LEVEL=2 (OR 3), TOGGLE RED LED (P
+                            OWER_LEVEL 3 NEVER GETS HERE)
+                      00299 
+005A   144C           00300         bsf     rbif_bits,0                     ; start checking for sweep motor error again
+005B   3057           00301         movlw   TICK_CNT                ; init msec5 so it will roll over after 1 second
+005C   00B5           00302         movwf   msec5
+                      00303 ;       movlw   0xf8                    ; SIM ONLY
+                      00304 ;       movwf   msec5                   ; SIM ONLY
+005D   0B36           00305         decfsz  init_done,w             ;   and init not done
+005E   286F           00306         goto    i_second                ;   do init stuff
+005F   0AB4           00307         incf    seconds,f               ; msec5 overflowed, actually toggled every 1 seconds
+0060   0834           00308         movf    seconds,w
+0061   390F           00309         andlw   0x0f                    ; update battery led every 16 seconds
+0062   1903           00310         btfsc   STATUS,Z
+0063   2370           00311         call    update_bat_led
+                      00312 
+0064                  00313 not_second:
+0064   3007           00314         movlw   7
+0065   0535           00315         andwf   msec5,w
+0066   0782           00316         addwf   PCL,f
+0067   2967           00317         goto    tick0
+0068   2974           00318         goto    tick1
+0069   297D           00319         goto    tick2
+006A   2982           00320         goto    tick3
+006B   2998           00321         goto    tick4
+006C   299E           00322         goto    tick5
+006D   29A0           00323         goto    tick6
+006E   29A2           00324         goto    tick7
+                      00325 
+006F                  00326 i_second:
+006F   0A34           00327         incf    seconds,w               ; msec5 overflowed, actually toggled every 1.25 seconds
+0070   00B4           00328         movwf   seconds
+0071   0782           00329         addwf   PCL,f
+0072   2846           00330         goto    at0sec                  ; 0 second - this won't happen
+0073   28E3           00331         goto    at1sec                  ; 1 second
+0074   28FA           00332         goto    at2sec                  ; 2 seconds
+0075   28FA           00333         goto    at3sec                  ; 3 seconds
+0076   28FB           00334         goto    at4sec
+0077   28FC           00335         goto    at5sec
+0078   28FF           00336         goto    at6sec
+0079   2900           00337         goto    at7sec
+007A   2903           00338         goto    at8sec
+007B   2904           00339         goto    at9sec
+007C   2904           00340         goto    at10sec
+007D   2904           00341         goto    at11sec
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE  8
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+007E   2905           00342         goto    at12sec
+007F   2905           00343         goto    at13sec
+0080   2906           00344         goto    at14sec
+0081   2908           00345         goto    at15sec
+                      00346 
+                      00347 
+                      00348 
+0082   2847           00349         goto    idle
+                      00350 ; end of main
+                      00351 
+                      00352 ;--- software PWM Generator
+                      00353 ;
+0083                  00354 PwmInt
+0083   110B           00355         bcf     INTCON,T0IF             ; clear interrupt flag
+0084   1807           00356         btfsc   PORTC,PWMOUTBIT         ; which edge is required?
+0085   28B6           00357         goto    Lowpulse                ; -> goto falling edge
+0086                  00358 Highpulse
+0086   0930           00359         comf    pwmdesired,W            ; get desired PWM value
+0087   00B2           00360         movwf   pwmhelp                 ; store val for the foll low pulse
+0088   07B1           00361         addwf   pwmmax,F                ; calc number of inst's to skip
+0089   1C03           00362         btfss   STATUS,C                ; which method to use?
+008A   28AF           00363         goto    HighImpInt              ; -> using interrupt
+008B                  00364 HighImpShrt
+008B   0831           00365         movf    pwmmax,W                ; get number of inst's to skip
+008C   0782           00366         addwf   PCL,F                   ; skip n instructions
+008D   1407           00367         bsf     PORTC,PWMOUTBIT         ; rising edge, 28 cycles hi pulse
+008E   1407           00368         bsf     PORTC,PWMOUTBIT         ; 27 cycles
+008F   1407           00369         bsf     PORTC,PWMOUTBIT         ; 26 cycles
+0090   1407           00370         bsf     PORTC,PWMOUTBIT         ; 25 cycles
+0091   1407           00371         bsf     PORTC,PWMOUTBIT         ; 24 cycles
+0092   1407           00372         bsf     PORTC,PWMOUTBIT         ; 23 cycles
+0093   1407           00373         bsf     PORTC,PWMOUTBIT         ; 22 cycles
+0094   1407           00374         bsf     PORTC,PWMOUTBIT         ; 21 cycles
+0095   1407           00375         bsf     PORTC,PWMOUTBIT         ; 20 cycles
+0096   1407           00376         bsf     PORTC,PWMOUTBIT         ; 19 cycles
+0097   1407           00377         bsf     PORTC,PWMOUTBIT         ; 18 cycles
+0098   1407           00378         bsf     PORTC,PWMOUTBIT         ; 17 cycles
+0099   1407           00379         bsf     PORTC,PWMOUTBIT         ; 16 cycles
+009A   1407           00380         bsf     PORTC,PWMOUTBIT         ; 15 cycles
+009B   1407           00381         bsf     PORTC,PWMOUTBIT         ; 14 cycles
+009C   1407           00382         bsf     PORTC,PWMOUTBIT         ; 13 cycles
+009D   1407           00383         bsf     PORTC,PWMOUTBIT         ; 12 cycles
+009E   1407           00384         bsf     PORTC,PWMOUTBIT         ; 11 cycles
+009F   1407           00385         bsf     PORTC,PWMOUTBIT         ; 10 cycles
+00A0   1407           00386         bsf     PORTC,PWMOUTBIT         ; 9 cycles
+00A1   1407           00387         bsf     PORTC,PWMOUTBIT         ; 8 cycles
+00A2   1407           00388         bsf     PORTC,PWMOUTBIT         ; 7 cycles
+00A3   1407           00389         bsf     PORTC,PWMOUTBIT         ; 6 cycles
+00A4   1407           00390         bsf     PORTC,PWMOUTBIT         ; 5 cycles
+00A5   1407           00391         bsf     PORTC,PWMOUTBIT         ; 4 cycles
+00A6   1407           00392         bsf     PORTC,PWMOUTBIT         ; 3 cycles
+00A7   1407           00393         bsf     PORTC,PWMOUTBIT         ; 2 cycles
+00A8   1407           00394         bsf     PORTC,PWMOUTBIT         ; 1 cycle
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE  9
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+00A9   1007           00395         bcf     PORTC,PWMOUTBIT         ; fall edge, start of the following
+                      00396                                         ; low pulse using the interrupt
+00AA   0AAE           00397         incf    counter,F               ; trigger counter, cause there was
+                      00398                                         ; a rising edge
+00AB   0932           00399         comf    pwmhelp,W               ; get required low pulse length
+00AC   3E1B           00400         addlw   PWMADJUSTVAL+5          ; calculate timer loading value
+                      00401                                         ; Edge was generated 5 cycles before
+                      00402                                         ; usual point of time
+00AD   0081           00403         movwf   TMR0                    ; put value into timer
+00AE   28DF           00404         goto    LowImpInt2              ; low pulse using int is running
+00AF                  00405 HighImpInt                              ; high pulse using interrupt
+00AF   3E16           00406         addlw   PWMADJUSTVAL            ; calculate timer loading value
+00B0   0081           00407         movwf   TMR0                    ; put value into timer
+00B1                  00408 HighImpInt2
+00B1   1407           00409         bsf     PORTC,PWMOUTBIT         ; generate rising edge
+00B2   0AAE           00410         incf    counter,F               ; trigger counter, because there was a rising edge
+00B3   301C           00411         movlw   PWMMAXVAL-1             ; "repair"...
+00B4   00B1           00412         movwf   pwmmax                  ; ...support register
+00B5   0008           00413         return                          ; return to main isr
+                      00414 
+                      00415 
+00B6                  00416 Lowpulse
+00B6   0932           00417         comf    pwmhelp,W               ; get required pulse length
+00B7   07B1           00418         addwf   pwmmax,F                ; calc number of inst's to skip
+00B8   1C03           00419         btfss   STATUS,C                ; which method is to use?
+00B9   28DD           00420         goto    LowImpInt               ; ->using interrupt
+00BA                  00421 LowImpShrt
+00BA   0831           00422         movf    pwmmax,W                ; get number of inst's to skip
+00BB   0782           00423         addwf   PCL,F                   ; skip n instructions
+00BC   1007           00424         bcf     PORTC,PWMOUTBIT         ; falling edge, 27 cycles low pulse
+00BD   1007           00425         bcf     PORTC,PWMOUTBIT         ; 26 cycles
+00BE   1007           00426         bcf     PORTC,PWMOUTBIT         ; 25 cycles
+00BF   1007           00427         bcf     PORTC,PWMOUTBIT         ; 24 cycles
+00C0   1007           00428         bcf     PORTC,PWMOUTBIT         ; 23 cycles
+00C1   1007           00429         bcf     PORTC,PWMOUTBIT         ; 22 cycles
+00C2   1007           00430         bcf     PORTC,PWMOUTBIT         ; 21 cycles
+00C3   1007           00431         bcf     PORTC,PWMOUTBIT         ; 20 cycles
+00C4   1007           00432         bcf     PORTC,PWMOUTBIT         ; 19 cycles
+00C5   1007           00433         bcf     PORTC,PWMOUTBIT         ; 18 cycles
+00C6   1007           00434         bcf     PORTC,PWMOUTBIT         ; 17 cycles
+00C7   1007           00435         bcf     PORTC,PWMOUTBIT         ; 16 cycles
+00C8   1007           00436         bcf     PORTC,PWMOUTBIT         ; 15 cycles
+00C9   1007           00437         bcf     PORTC,PWMOUTBIT         ; 14 cycles
+00CA   1007           00438         bcf     PORTC,PWMOUTBIT         ; 13 cycles
+00CB   1007           00439         bcf     PORTC,PWMOUTBIT         ; 12 cycles
+00CC   1007           00440         bcf     PORTC,PWMOUTBIT         ; 11 cycles
+00CD   1007           00441         bcf     PORTC,PWMOUTBIT         ; 10 cycles
+00CE   1007           00442         bcf     PORTC,PWMOUTBIT         ; 9 cycles
+00CF   1007           00443         bcf     PORTC,PWMOUTBIT         ; 8 cycles
+00D0   1007           00444         bcf     PORTC,PWMOUTBIT         ; 7 cycles
+00D1   1007           00445         bcf     PORTC,PWMOUTBIT         ; 6 cycles
+00D2   1007           00446         bcf     PORTC,PWMOUTBIT         ; 5 cycles
+00D3   1007           00447         bcf     PORTC,PWMOUTBIT         ; 4 cycles
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 10
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+00D4   1007           00448         bcf     PORTC,PWMOUTBIT         ; 3 cycles
+00D5   1007           00449         bcf     PORTC,PWMOUTBIT         ; 2 cycles
+00D6   1007           00450         bcf     PORTC,PWMOUTBIT         ; 1 cycles
+00D7   1407           00451         bsf     PORTC,PWMOUTBIT         ; rising edge; start of the next
+                      00452                                         ; high pulse using the interrupt
+00D8   0930           00453         comf    pwmdesired,W            ; get desired PWM value
+00D9   00B2           00454         movwf   pwmhelp                 ; store val for the next lo pulse
+00DA   3E1B           00455         addlw   PWMADJUSTVAL+5          ; calculate timer loading value
+                      00456                                         ; Edge was gen'd 5 cycles before
+                      00457                                         ; usual point of time.
+00DB   0081           00458         movwf   TMR0                    ; put value into timer
+00DC   28B1           00459         goto    HighImpInt2             ; high pulse using int is running
+00DD                  00460 LowImpInt                               ; low pulse using interrupt
+00DD   3E16           00461         addlw   PWMADJUSTVAL            ; calculate timer loading value
+00DE   0081           00462         movwf   TMR0                    ; put value into timer
+00DF                  00463 LowImpInt2
+00DF   1007           00464         bcf     PORTC,PWMOUTBIT         ; generate falling edge
+00E0   301D           00465         movlw   PWMMAXVAL               ; "repair" ...
+00E1   00B1           00466         movwf   pwmmax                  ; ... support register
+00E2   0008           00467         return                          ; return to main isr
+                      00468 
+                      00469 
+                      00470 
+                      00471 
+                      00472 ; this is really part of main loop, moved here so PWNINT can reside below 0x100
+                      00473 
+                      00474 ; enable top motor 20KHz, 10% duty cycle
+00E3                  00475 at1sec
+                      00476 
+00E3   0191           00477         clrf    TMR2                    ; clear timer2
+00E4   0192           00478         clrf    T2CON                   ; hardware pwm prescaler is one, timer 2 off
+                      00479 ;       movlw   0x02                    ; hardware pwm prescaler is 16, timer 2 off
+                      00480 ;       movwf   T2CON
+00E5   1683           00481         bsf     STATUS,RP0              ; register page 1
+00E6   30FF           00482         movlw   0xff                    ; period is 50 us if prescaler is 1, 82 us if prescaler is 16
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+00E7   0092           00483         movwf   PR2                     ;
+00E8   1283           00484         bcf     STATUS,RP0              ; register page 0
+                      00485 ;       movlw   0x7f
+00E9   3019           00486         movlw   0x19
+00EA   00A4           00487         movwf   t_top_pwm
+00EB   00A6           00488         movwf   t_bot_pwm
+00EC   00A5           00489         movwf   c_top_pwm
+00ED   00A7           00490         movwf   c_bot_pwm
+                      00491 ;       movlw   0x7f                    ; 50% duty cycle
+00EE   3019           00492         movlw   0x19                    ; 10% duty cycle
+00EF   0095           00493         movwf   CCPR1L                  ;
+00F0   019B           00494         clrf    CCPR2L
+00F1   1683           00495         bsf     STATUS,RP0              ; bank1
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+00F2   1107           00496         bcf     TRISC,PWM1              ; make pin for pwm1 output
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+00F3   1087           00497         bcf     TRISC,PWM2              ; make pin for pwm2 output
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 11
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+00F4   018C           00498         clrf    PIE1                    ; disable peripheral interrupts
+00F5   1283           00499         bcf     STATUS,RP0              ; bank0
+00F6   018C           00500         clrf    PIR1                    ; clear peripheral interrupts flags
+00F7   300C           00501         movlw   0x0c                    ; PWM mode, 2LSBs of duty cycle = 0 (top)
+                      00502 ;       movlw   0x3c                    ; DEBUG PWM mode, 2LSBs of duty cycle = 11b (top)
+00F8   0097           00503         movwf   CCP1CON
+                      00504 ;       movlw   0x0c                    ; PWM mode, 2LSBs of duty cycle = 0 (bottom)
+                      00505 ;       movwf   CCP2CON
+00F9   1512           00506         bsf     T2CON,TMR2ON            ; timer2 starts to increment
+                      00507 
+                      00508 ; fall through to atcom
+                      00509 
+00FA                  00510 at2sec
+00FA                  00511 at3sec
+                      00512 
+00FA   2907           00513         goto    atcom
+                      00514 
+00FB                  00515 at4sec
+                      00516 
+                      00517 ;; Top motor duty cycle set to pot
+                      00518 ;       incf    top_inited,f            ; set flag to allow top PWM to adjust to pot, 06/15/05 MJZ chang
+                            e
+                      00519 ; Bottom motor duty cycle set to pot
+                      00520 ;       incf    bot_inited,f            ; set flag to allow bottom PWM to adjust to pot
+00FB   2907           00521         goto    atcom
+                      00522 
+00FC                  00523 at5sec
+                      00524 
+00FC   300C           00525         movlw   0x0c                    ; PWM mode, 2LSBs of duty cycle = 0
+                      00526 ;       movlw   0x3c                    ; DEBUG PWM mode, 2LSBs of duty cycle = 11b (bottom)
+00FD   009D           00527         movwf   CCP2CON
+                      00528 ;       movlw   0x0c                    ; PWM mode, 2LSBs of duty cycle = 0
+                      00529 ;       movwf   CCP1CON
+00FE   2907           00530         goto    atcom
+                      00531 
+00FF                  00532 at6sec
+                      00533         
+00FF   2907           00534         goto    atcom
+                      00535 
+0100                  00536 at7sec
+                      00537 
+                      00538 ;; Top motor duty cycle set to pot, 06/15/05 MJZ change
+0100   0AA8           00539         incf    top_inited,f            ; set flag to allow top PWM to adjust to pot, 06/15/05 MJZ chang
+                            e
+                      00540 
+                      00541 ;; Bottom motor duty cycle set to pot,  ; 06/15/05 MJZ changes, set to pot sooner than original
+0101   0AA9           00542         incf    bot_inited,f            ; set flag to allow bottom PWM to adjust to pot, 06/15/05 MJZ ch
+                            ange, see above line
+                      00543 
+0102   2907           00544         goto    atcom
+                      00545 
+                      00546 ; fall through to atcom
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 12
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0103                  00547 at8sec
+                      00548 ;; Bottom motor duty cycle set to pot
+                      00549 ;       incf    bot_inited,f            ; set flag to allow bottom PWM to adjust to pot, 06/15/05 MJZ ch
+                            ange, move to "at7sec"
+                      00550 ; Top motor duty cycle set to pot
+                      00551 ;       incf    top_inited,f            ; set flag to allow top PWM to adjust to pot
+0103   2907           00552         goto    atcom
+                      00553 
+0104                  00554 at9sec
+0104                  00555 at10sec
+0104                  00556 at11sec
+0104   2907           00557         goto    atcom
+0105                  00558 at12sec
+                      00559 ; sweep motor control
+                      00560 ;       incf    sweep_inited,f          ; set flag to allow sweep motor control
+                      00561 ;       bcf     rbif_bits,0             ;  don't check for sweep motor error
+                      00562 ;       incf    init_done,f             ; set initialization done flag
+                      00563 
+                      00564 ; fall through to atcom
+0105                  00565 at13sec
+                      00566 ;       movf    feed_a2d,w
+                      00567 ;       sublw   0x3f                    ; if input < 1.25V (no borrow), power feed motor to pot
+                      00568 ;       btfsc   STATUS,C                ; else force to 1.25V for 1 sec, then set to pot
+                      00569 ;       goto    under_1_25
+                      00570 ;       movlw   0x3f
+                      00571 ;       movwf   feed_a2d
+                      00572 ;under_1_25
+                      00573 ;       call    init_feed_pwm
+0105   2907           00574         goto    atcom
+                      00575 
+0106                  00576 at14sec
+                      00577 ;       movf    feed_a2d,w
+                      00578 ;       sublw   0x7f                    ; if input < 2.5V (no borrow), power feed motor to pot
+                      00579 ;       btfsc   STATUS,C                ; else force to 2.5V for 1 sec, then set to pot
+                      00580 ;       goto    under_2_5
+                      00581 ;       movlw   0x7f
+                      00582 ;       movwf   feed_a2d
+                      00583 ;under_2_5
+                      00584 ;       call    init_feed_pwm
+0106   2907           00585         goto    atcom
+                      00586 
+                      00587 
+                      00588 
+0107                  00589 atcom:
+0107   2847           00590         goto    idle
+                      00591 
+0108                  00592 at15sec:
+                      00593 ; if feed motor a2d input > 1.0V, enable feed motor to pot
+0108   0AAA           00594         incf    feed_inited,f           ; enable feed motor if input > 1.0V
+0109   0AB6           00595         incf    init_done,f             ; set initialization done flag
+010A   2847           00596         goto    idle                    ; goto main idle loop
+                      00597 
+010B                  00598 sec0init:
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 13
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00599         ; init usart
+010B   1683           00600         bsf     STATUS,RP0              ; goto bank 1
+                      00601 ;       movlw   0xff                    ; 1200 baud
+010C   3081           00602         movlw   0x81                    ; 2400 baud
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+010D   0099           00603         movwf   SPBRG
+010E   3020           00604         movlw   0x20                    ; 8-bit transimit, transmitter enabled
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+010F   0098           00605         movwf   TXSTA                   ; asynchronous mode, low speed mode
+0110   1283           00606         bcf     STATUS,RP0              ; goto bank 0
+0111   3090           00607         movlw   0x90                    ; 8-bit receive, receiver enabled
+0112   0098           00608         movwf   RCSTA                   ; serial port enabled
+                      00609 
+0113   2403           00610         call    usart_off               ; turn off usart, disable beep
+                      00611 
+                      00612 ;       movlw   0x0f                    ; change to 0x0d - don't check feed motor
+0114   300D           00613         movlw   0x0d
+0115   00CC           00614         movwf   rbif_bits               ; check all motor errors
+0116   0181           00615         clrf    TMR0
+0117   01B3           00616         clrf    a2d_chan
+0118   2263           00617         call    acq_a2d                 ; acquire chan0 a2d - BALL SPIN
+0119   00B8           00618         movwf   spin_a2d                ; save value
+011A   3C8F           00619         sublw   0x8f                    ; if spin_a2d < 143
+011B   308F           00620         movlw   0x8f
+011C   1803           00621         btfsc   STATUS,C                ;  skip if borrow - spin_a2d > 143
+011D   00B8           00622         movwf   spin_a2d                ;  if spin_a2d < 143, spin_a2d = 143
+011E   0838           00623         movf    spin_a2d,w              ; 
+011F   3E06           00624         addlw   6       
+0120   30FA           00625         movlw   0xfa                    ; if spin_a2d > 250
+0121   1803           00626         btfsc   STATUS,C                ; 
+0122   00B8           00627         movwf   spin_a2d                ;  spin_a2d = 250
+                      00628 
+0123   3001           00629         movlw   1
+0124   00B3           00630         movwf   a2d_chan
+0125   2263           00631         call    acq_a2d                 ; acquire chan1 a2d - SPEED 
+0126   00B9           00632         movwf   spd_a2d
+0127   3C8F           00633         sublw   0x8f                    ; if speed_a2d < 143
+0128   308F           00634         movlw   0x8f
+0129   1803           00635         btfsc   STATUS,C                ;  skip if borrow - speed_a2d > 143
+012A   00B9           00636         movwf   spd_a2d                 ;  if speed_a2d < 143, speed_a2d = 143
+012B   0839           00637         movf    spd_a2d,w               ; 
+012C   3E06           00638         addlw   6       
+012D   30FA           00639         movlw   0xfa                    ; if spd_a2d > 250
+012E   1803           00640         btfsc   STATUS,C                ; 
+012F   00B9           00641         movwf   spd_a2d                 ;  spd_a2d = 250
+                      00642 
+0130   3002           00643         movlw   2
+0131   00B3           00644         movwf   a2d_chan
+0132   2263           00645         call    acq_a2d                 ; acquire chan2 a2d - battery
+                      00646 ;       movlw   0xff                    ; SIM - force battery ok
+0133   00BA           00647         movwf   bat_a2d         
+0134   3003           00648         movlw   3
+0135   00B3           00649         movwf   a2d_chan
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 14
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0136   2263           00650         call    acq_a2d                 ; acquire chan3 a2d - feed rate
+0137   00BB           00651         movwf   feed_a2d
+0138   3C14           00652         sublw   0x14                    ; 20 - feed_a2d
+0139   1C03           00653         btfss   STATUS,C                ;  skip if no borrow - feed_a2d < 20
+013A   2940           00654         goto    feed_ok
+013B   083B           00655         movf    feed_a2d,w
+013C   3C0F           00656         sublw   0x0f                    ; 15 - feed_a2d
+013D   3014           00657         movlw   0x14
+013E   1C03           00658         btfss   STATUS,C                ;  skip if no borrow - feed _a2d < 11
+013F   00BB           00659         movwf   feed_a2d                ;  if 15 < feed_a2d < 20, speed_a2d = 20
+0140                  00660 feed_ok
+                      00661 
+0140   3004           00662         movlw   4
+0141   00B3           00663         movwf   a2d_chan
+0142   2263           00664         call    acq_a2d                 ; acquire chan4 a2d - sweep enable
+0143   00BC           00665         movwf   sweep_a2d
+                      00666         
+                      00667 ;       btfsc   PORTB,0                 ;MJZ COMMENTED THIS LINE
+                      00668 ;       goto    power_is_off            ; if RB0 is set, power switch is off    ;MJZ COMMENTED THIS LINE
+0144   1A06           00669         btfsc   PORTB,4                 ;MJZ ADDED THIS LINE, POWER SWITCH NOW ON RB4
+0145   2AA0           00670         goto    power_is_off    ;MJZ ADDED THIS LINE, POWER SWITCH NOW ON RB4
+                      00671 
+0146   083A           00672         movf    bat_a2d,w               ; get battery level
+                      00673 ;       sublw   0x7a                    ; if battery less than 2.4V (0x7a - bat_a2d)
+0147   3C84           00674         sublw   0x84                    ; at power on, battery must be at least 2.6V to power up motors
+0148   1803           00675         btfsc   STATUS,C                ;    skip if borrow (> 2.6V)    ;MJZ DEBUG, COMMENTED THIS LINE
+                      00676 ;       btfss   STATUS,C                ;MJZ DEBUG, ADDED THIS LINE FOR SIMULATION TO GET PAST NO BATTER
+                            Y INPUT
+0149   2B3E           00677         goto    bat_dead                ;  battery exhausted, shut down all motors
+014A   1607           00678         bsf     PORTC,ELEV_EN           ; else enable elevation motor
+014B   0186           00679         clrf    PORTB                   ; on 1st power up, getting motor error
+014C   018B           00680         clrf    INTCON                  ;  so make sure conditions are cleared
+014D   01CD           00681         clrf    sweep_is_on             ; clear sweep motor on flag
+014E   01D5           00682         clrf    linesw_toggle   ;MJZ CLEAR 2-LINE SWITCH TOGGLE BYTE
+014F   235F           00683         call    init_bat_level
+                      00684 ; sweep motor control
+0150   0AAB           00685         incf    sweep_inited,f          ; set flag to allow sweep motor control
+                      00686 
+0151   1623           00687         bsf     pwr_on_code,NOT_TO      ; ignore watchdog timeout reset
+0152   0823           00688         movf    pwr_on_code,w           ; change bits to code : 0 = pwr on reset, 
+                      00689                                         ;                       1= BOR, 2=wdt, 3=reset
+0153   00A2           00690         movwf   temp
+0154   01A3           00691         clrf    pwr_on_code
+0155   1CA2           00692         btfss   temp,NOT_POR
+0156   2961           00693         goto    pwr_on_reset
+0157   0AA3           00694         incf    pwr_on_code,f
+0158   1C22           00695         btfss   temp,NOT_BOR
+0159   295D           00696         goto    npwr_on_reset
+015A   0AA3           00697         incf    pwr_on_code,f
+015B   1A22           00698         btfsc   temp,NOT_TO
+015C   0AA3           00699         incf    pwr_on_code,f
+015D                  00700 npwr_on_reset:                          ; not power on reset (and not watchdog timeout)
+015D   3006           00701         movlw   6
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 15
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+015E   00C2           00702         movwf   flash_code
+015F   232C           00703         call    flash_error
+0160   295D           00704         goto    npwr_on_reset
+                      00705 
+0161                  00706 pwr_on_reset:
+                      00707 
+0161   01D0           00708         clrf    remote_toggle           ; feed and sweep toggle are both off
+0162   16D0           00709         bsf     remote_toggle,REMOTE_BIT        ; remote switch is off
+0163   01D1           00710         clrf    remote_block            ; blocking of remote xmitter is off
+0164   01D2           00711         clrf    FF_count                ; no FF's to send
+0165   01D4           00712         clrf    beep_count
+                      00713         
+0166   0008           00714         return
+                      00715 
+0167                  00716 tick0:
+0167   01B3           00717         clrf    a2d_chan
+0168   2263           00718         call    acq_a2d                 ; acquire chan0 a2d - BALL SPIN
+0169   00B8           00719         movwf   spin_a2d                ; save value
+016A   3C8F           00720         sublw   0x8f                    ; if spin_a2d < 143
+016B   308F           00721         movlw   0x8f
+016C   1803           00722         btfsc   STATUS,C                ;  skip if borrow - spin_a2d > 143
+016D   00B8           00723         movwf   spin_a2d                ;  if spin_a2d < 143, spin_a2d = 143
+016E   0838           00724         movf    spin_a2d,w              ; 
+016F   3E06           00725         addlw   6       
+0170   30FA           00726         movlw   0xfa                    ; if spin_a2d > 250
+0171   1803           00727         btfsc   STATUS,C                ; 
+0172   00B8           00728         movwf   spin_a2d                ;  spin_a2d = 250
+0173   2847           00729         goto    idle
+                      00730 
+0174                  00731 tick1:
+0174   3001           00732         movlw   1
+0175   00B3           00733         movwf   a2d_chan
+0176   2263           00734         call    acq_a2d                 ; acquire chan1 a2d - SPEED 
+                      00735 ;       movlw   0xff                    ; SIM - force speed max
+0177   00B9           00736         movwf   spd_a2d
+0178   3C8F           00737         sublw   0x8f                    ; if spd_a2d < 143
+0179   308F           00738         movlw   0x8f
+017A   1803           00739         btfsc   STATUS,C                ;  skip if borrow - spd_a2d > 143
+017B   00B9           00740         movwf   spd_a2d                 ;  if spd_a2d < 143, spd_a2d = 143
+                      00741 ;       movf    spd_a2d,w               ; 
+                      00742 ;       addlw   6       
+                      00743 ;       movlw   0xfa                    ; if spd_a2d > 250
+                      00744 ;       btfsc   STATUS,C                ; 
+                      00745 ;       movwf   spd_a2d                 ;  spd_a2d = 250
+017C   2847           00746         goto    idle
+                      00747 
+017D                  00748 tick2:
+017D   3002           00749         movlw   2
+017E   00B3           00750         movwf   a2d_chan
+017F   2263           00751         call    acq_a2d                 ; acquire chan2 a2d - battery
+                      00752 ;       movlw   0xff                    ; SIM - force battery ok
+0180   00BA           00753         movwf   bat_a2d         
+                      00754 ;       sublw   0x7a                    ; if battery less than 2.4V (0x7a - W)  
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 16
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00755 ;       btfsc   STATUS,C                ;       skip if borrow set ( > 2.4V )
+                      00756 ;       goto    bat_dead                ;  battery exhausted, shut down all motors
+                      00757         ; update battery led here if battery level changed
+                      00758 
+0181   2847           00759         goto    idle
+                      00760 
+0182                  00761 tick3:
+0182   3003           00762         movlw   3
+0183   00B3           00763         movwf   a2d_chan
+0184   2263           00764         call    acq_a2d                 ; acquire chan3 a2d - feed rate
+                      00765 ;       movlw   0xff                    ; SIM - force feed ok
+0185   00BB           00766         movwf   feed_a2d
+0186   3C14           00767         sublw   0x14                    ; 20 - feed_a2d
+0187   1C03           00768         btfss   STATUS,C                ;  skip if no borrow - feed_a2d < 20
+                      00769 ;       goto    feed_ok1                ;MJZ COMMENTED THIS LINE
+0188   298F           00770         goto    chk_feed_rate_type      ;MJZ ADDED LINE, IF > 20, CHECK IF MUST RESTRICT MAXIMUM FEED RA
+                            TE FOR 2-LINE MODE
+0189   083B           00771         movf    feed_a2d,w
+018A   3C0F           00772         sublw   0x0f                    ; 15 - feed_a2d
+018B   3014           00773         movlw   0x14
+018C   1C03           00774         btfss   STATUS,C                ;  skip if no borrow - feed _a2d < 11
+018D   00BB           00775         movwf   feed_a2d                ;  if 17 < feed_a2d < 20, speed_a2d = 20
+018E   2997           00776         goto    feed_ok1                ;MJZ ADDED LINE
+                      00777 ;feed_ok1                                       ;MJZ COMMENTED THIS LINE
+                      00778 ;       goto    idle                    ;MJZ COMMENTED THIS LINE
+018F                  00779 chk_feed_rate_type:                             ;MJZ ADDED LINE
+018F   1C57           00780         btfss   feed_rate_type,0        ;MJZ ADDED LINE, IF SET, MUST RESTRICT MAXIMUM FEED RATE FOR 2-L
+                            INE MODE
+0190   2997           00781         goto    feed_ok1                        ;MJZ ADDED LINE
+0191   083B           00782         movf    feed_a2d,w                      ;MJZ ADDED LINE
+0192   3C57           00783         sublw   0x57                            ;MJZ ADDED LINE, MAXIMUM FEED RATE FOR 2-LINE MODE
+0193   1803           00784         btfsc   STATUS,C                        ;MJZ ADDED LINE, SKIP IF BORROW, IF FEED RATE HIGHER THA
+                            N 0X57 (first try was 0x40)
+0194   2997           00785         goto    feed_ok1                        ;MJZ ADDED LINE, OK IF FEED RATE ALREADY LESS THAN 0X57
+0195   3057           00786         movlw   0x57                            ;MJZ ADDED LINE
+0196   00BB           00787         movwf   feed_a2d                        ;MJZ ADDED LINE, RESTRICT FEED RATE TO 0X57 (first try w
+                            as 0x40) MAXIMUM FOR 2-LINE MODE
+0197                  00788 feed_ok1:                                               ;MJZ ADDED LINE
+0197   2847           00789         goto idle                                       ;MJZ ADDED LINE
+                      00790 
+0198                  00791 tick4:
+0198   3004           00792         movlw   4
+0199   00B3           00793         movwf   a2d_chan
+019A   2263           00794         call    acq_a2d                 ; acquire chan4 a2d - sweep enable
+019B   00BC           00795         movwf   sweep_a2d
+019C   2241           00796         call    update_remote           ; check if remote enable switch had changed
+019D   2847           00797         goto    idle
+                      00798 
+019E                  00799 tick5:
+019E   2282           00800         call    calc_top_pwm
+019F   2847           00801         goto    idle
+                      00802 
+01A0                  00803 tick6:
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 17
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+01A0   21A6           00804         call    update_top_pwm
+01A1   2847           00805         goto    idle
+                      00806 
+01A2                  00807 tick7:
+01A2   21C1           00808         call    update_feed_pwm
+01A3   222A           00809         call    update_sweep
+                      00810 ;       call    update_bat_led
+01A4   2391           00811         call    record_bat_level
+01A5   2847           00812         goto    idle
+                      00813 
+                      00814 
+01A6                  00815 update_top_pwm:
+01A6   0B28           00816         decfsz  top_inited,w            ; if TOP MOTOR PWM inited,
+                      00817 ;       goto    upd_exit                ; 06/09/05 MJZ commented this line, see next line
+01A7   247E           00818         call    top_not_inited  ; 06/09/05 MJZ added this line, at power-on, ramp up top serve motor reg
+                            ardless of speed pot
+01A8   0825           00819         movf    c_top_pwm,w             ;  load current top pwm value into W
+01A9   0224           00820         subwf   t_top_pwm,w             ;  W = (target - current)
+01AA   1903           00821         btfsc   STATUS,Z                ;  if current top pwm value equal target top pwm value
+01AB   29C0           00822         goto    upd_exit                ;   done
+01AC   1C03           00823         btfss   STATUS,C                ;  if current top pwm value < than target ( borrow cleared)
+01AD   29B6           00824         goto    dec_top                 ;       (goto dec_top if borrow set)
+01AE   39F8           00825         andlw   0xf8                    ;  if delta < 8
+01AF   1D03           00826         btfss   STATUS,Z
+01B0   29B3           00827         goto    inc_top_by_8
+01B1   0A25           00828         incf    c_top_pwm,w             ;   incr top pwm value and save to W
+01B2   29BE           00829         goto    set_top
+01B3                  00830 inc_top_by_8:                           ; else incr top pwm value by 8
+                      00831 ;       movlw   8
+                      00832 ;       btfss   init_done,0             ;      if init_done flag is set
+01B3   3004           00833         movlw   4                       ;      else inc by 4
+01B4   0725           00834         addwf   c_top_pwm,w
+01B5   29BE           00835         goto    set_top
+01B6                  00836 dec_top:
+01B6   3C00           00837         sublw   0                       ; figure out delta to decrement
+01B7   39F8           00838         andlw   0xf8                    ; if delta < 8
+01B8   1D03           00839         btfss   STATUS,Z
+01B9   29BC           00840         goto    dec_top_by_8
+01BA   0325           00841         decf    c_top_pwm,w             ;  dec top pwm value and save to W
+01BB   29BE           00842         goto    set_top
+01BC                  00843 dec_top_by_8
+                      00844 ;       movlw   8
+                      00845 ;       btfss   init_done,0             ; if init_done flag is not set
+01BC   3004           00846         movlw   4                       ;      dec by 4
+01BD   0225           00847         subwf   c_top_pwm,w             ; else dec top pwm value by 8
+01BE                  00848 set_top:
+01BE   00A5           00849         movwf   c_top_pwm               ;  save current top pwm value
+01BF   0095           00850         movwf   CCPR1L                  ;  write new duty cycle value to PWM module 1
+01C0                  00851 upd_exit:
+01C0   0008           00852         return
+                      00853 
+                      00854 ; if soft_pwm == 0
+                      00855 ;   if input >= 1.0 volt, enable software pwm
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 18
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00856 ;   if input < 1.0 volt, do nothing
+                      00857 ; if soft_pwm == 1
+                      00858 ;   if input < 1.0 volt, soft_pwm = 0 and disable software pwm
+                      00859 ;   if input > 1.0, adjust pwmdesired
+                      00860 ; check a2d of feed control
+01C1                  00861 update_feed_pwm:
+01C1   0B2A           00862         decfsz  feed_inited,w
+01C2   2A10           00863         goto    chk_feed_xit
+01C3   1AD0           00864         btfsc   remote_toggle,REMOTE_BIT ; if remote switch is on
+01C4   29C7           00865         goto    no_remote_feed
+01C5   1C50           00866         btfss   remote_toggle,FEED_BIT  ;    and feed toggle is off
+01C6   29CB           00867         goto    feed_off                ;        disable feed
+01C7                  00868 no_remote_feed:
+01C7   083B           00869         movf    feed_a2d,w
+01C8   3C13           00870         sublw   0x13                    ; if input < 0.4V (no borrow)
+01C9   1C03           00871         btfss   STATUS,C
+01CA   29D4           00872         goto    over1v
+01CB                  00873 feed_off:
+01CB   0B37           00874         decfsz  soft_pwm,w              ;  and soft_pwm was on
+01CC   2A10           00875         goto    chk_feed_xit
+                      00876         ; disable software pwm
+01CD   138B           00877         bcf     INTCON,GIE              ;  disable GLOBAL INTERRUPT ENABLE
+01CE   01B7           00878         clrf    soft_pwm
+01CF   01B0           00879         clrf    pwmdesired
+01D0   1007           00880         bcf     PORTC,PWMOUTBIT         ;  force feed motor off
+01D1   11C3           00881         bcf     led_bits,FEED_LED
+01D2   1186           00882         bcf     PORTB,FEED_LED          ;  turn feed led off
+01D3   2A10           00883         goto    chk_feed_xit
+01D4                  00884 over1v
+01D4   0B37           00885         decfsz  soft_pwm,w              ; if soft_pwm was off
+01D5   29D7           00886         goto    enable_feed
+01D6   29E0           00887         goto    update_feed
+01D7                  00888 enable_feed:
+                      00889         ; enable software pwm
+01D7   1586           00890         bsf     PORTB,FEED_LED          ; turn feed led on
+01D8   15C3           00891         bsf     led_bits,FEED_LED
+01D9   0181           00892         clrf    TMR0                    ; reset timer 0
+01DA   30A0           00893         movlw   INTCONVAL               ; enable timer0 intr
+01DB   008B           00894         movwf   INTCON
+01DC   0AB7           00895         incf    soft_pwm,f              ; indicate feed pwm active by setting soft_pwm
+01DD   3043           00896         movlw   0x43                    ; got straight to 26% duty cycle
+01DE   00BF           00897         movwf   delta_s
+01DF   2A0E           00898         goto    set_pwm_value
+                      00899 
+01E0                  00900 update_feed:                            ; check if feed motor pwm duty cycle need updating
+                      00901 
+01E0   3007           00902         movlw   0x07                    ; if feed_a2d > 248
+01E1   073B           00903         addwf   feed_a2d,W              ;
+01E2   1C03           00904         btfss   STATUS,C                ; and
+01E3   29EB           00905         goto    calc_feed
+01E4   3020           00906         movlw   0x20                    ;  if pwmdesired > 223
+01E5   0730           00907         addwf   pwmdesired,W            ;
+01E6   1C03           00908         btfss   STATUS,C                ;  
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 19
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+01E7   29EB           00909         goto    calc_feed
+01E8   0F30           00910         incfsz  pwmdesired,w
+01E9   00B0           00911         movwf   pwmdesired
+01EA   2A10           00912         goto    chk_feed_xit            ;  if > 233, step up by one to 255
+                      00913         
+01EB                  00914 calc_feed:
+01EB   3014           00915         movlw   0x14                    ; calc delta c
+01EC   023B           00916         subwf   feed_a2d,w
+01ED   00BE           00917         movwf   delta_c                 ; delta_c = feed_a2d - 20
+01EE   3E43           00918         addlw   0x43                    ;  W = 67 + delta_c
+01EF   00BF           00919         movwf   delta_s                 ;    save in delta_s
+01F0   1003           00920         bcf     STATUS,C
+01F1   0CBE           00921         rrf     delta_c,F               ;  ( div by 2 )
+01F2   1003           00922         bcf     STATUS,C
+01F3   0CBE           00923         rrf     delta_c,F               ;  ( div by 4 )
+01F4   083E           00924         movf    delta_c,W
+01F5   02BF           00925         subwf   delta_s,F               ;         - delta_c / 4
+01F6   1003           00926         bcf     STATUS,C
+01F7   0CBE           00927         rrf     delta_c,F               ;  ( div by 8 )
+01F8   1003           00928         bcf     STATUS,C
+01F9   0CBE           00929         rrf     delta_c,F               ;  ( div by 16 )
+01FA   083E           00930         movf    delta_c,W
+01FB   07BF           00931         addwf   delta_s,F               ;         + delta_c / 16
+01FC   1003           00932         bcf     STATUS,C
+01FD   0CBE           00933         rrf     delta_c,F               ;  ( div by 32 )
+01FE   1003           00934         bcf     STATUS,C
+01FF   0C3E           00935         rrf     delta_c,W               ;  ( div by 64 )
+0200   023F           00936         subwf   delta_s,W               ;         - delta_c / 64
+                      00937 
+0201   00BF           00938         movwf   delta_s                 ; delta_s is now new feed pwm value
+0202   0830           00939         movf    pwmdesired,w
+0203   023F           00940         subwf   delta_s,w               ; W = new pwm value - pwmdesired
+0204   1C03           00941         btfss   STATUS,C                ; skip if no borrow: new pwm value > pwmdesired
+0205   2A0E           00942         goto    set_pwm_value           ;    new pwm value is smaller, ok to ramp dowm immediately
+0206   39FC           00943         andlw   0xfc                    ;
+0207   1903           00944         btfsc   STATUS,Z                ; if delta < 4
+0208   2A0E           00945         goto    set_pwm_value           ;    set to new pwm value
+0209   3003           00946         movlw   3                       ; else incr pwmdesired by 3
+020A   1C36           00947         btfss   init_done,0             ;       if not init_done, incr by 2
+020B   3002           00948         movlw   2
+020C   07B0           00949         addwf   pwmdesired,f
+020D   2A10           00950         goto    chk_feed_xit
+                      00951         
+020E                  00952 set_pwm_value
+020E   083F           00953         movf    delta_s,w
+020F   00B0           00954         movwf   pwmdesired              ; save current feed pwm value
+0210                  00955 chk_feed_xit:
+0210   0008           00956         return
+                      00957 
+                      00958 ; at 13 seconds, if pot > 25% duty cycle, init feed pwm to 25% duty cycle
+                      00959 ; at 14 seconds, if pot > 50% duty cycle, init feed pwm to 50% duty cycle
+0211                  00960 init_feed_pwm:                          ; this gets called before feed_inited is set
+0211   083B           00961         movf    feed_a2d,w
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 20
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0212   3C20           00962         sublw   0x20                    ; if input < 0.4V (no borrow)
+0213   1C03           00963         btfss   STATUS,C
+0214   2A1E           00964         goto    over_pt4_v
+0215   0B37           00965         decfsz  soft_pwm,w              ;  and soft_pwm was on
+0216   2A29           00966         goto    init_feed_xit
+                      00967         ; disable software pwm
+0217   138B           00968         bcf     INTCON,GIE              ;  disable GLOBAL INTERRUPT ENABLE
+0218   01B7           00969         clrf    soft_pwm
+0219   01B0           00970         clrf    pwmdesired
+021A   1007           00971         bcf     PORTC,PWMOUTBIT         ;  force feed motor off
+021B   11C3           00972         bcf     led_bits,FEED_LED
+021C   1186           00973         bcf     PORTB,FEED_LED          ;  turn feed led off
+021D   2A29           00974         goto    init_feed_xit
+021E                  00975 over_pt4_v
+021E   0B37           00976         decfsz  soft_pwm,w              ; if soft_pwm was off
+021F   2A21           00977         goto    init_enable_feed
+0220   2A27           00978         goto    init_update_feed
+0221                  00979 init_enable_feed:
+                      00980         ; enable software pwm
+0221   1586           00981         bsf     PORTB,FEED_LED          ; turn feed led on
+0222   15C3           00982         bsf     led_bits,FEED_LED
+0223   0181           00983         clrf    TMR0                    ; reset timer 0
+0224   30A0           00984         movlw   INTCONVAL               ; enable timer0 intr
+0225   008B           00985         movwf   INTCON
+0226   0AB7           00986         incf    soft_pwm,f              ; indicate feed pwm active by setting soft_pwm
+0227                  00987 init_update_feed:                               ; check if feed motor pwm duty cycle need updating
+0227   083B           00988         movf    feed_a2d,w              ; *** go straight to feed_a2d value
+0228   00B0           00989         movwf   pwmdesired              ; save current feed pwm value
+0229                  00990 init_feed_xit:
+0229   0008           00991         return
+                      00992 
+                      00993 
+                      00994 
+022A                  00995 update_sweep:
+                      00996 ; turn on/off sweep motor based on a2d
+022A   0B2B           00997         decfsz  sweep_inited,w          ; if sweep not inited exit
+022B   2A3D           00998         goto    sweep_exit
+022C   1ED0           00999         btfss   remote_toggle,REMOTE_BIT; if remote not enable,
+022D   2A3E           01000         goto    sweep_remote
+022E   083C           01001         movf    sweep_a2d,w
+                      01002 ;       sublw   0x33                    ;  if sweep switch < 1.0V (no borrow)
+022F   3C99           01003         sublw   0x99                    ;MJZ ADDED LINE, CHANGED TO < 3.0V TO TURN SWEEP ON REGARDLESS O
+                            F WHICH RESISTOR DIVIDER CIRCUIT ACTIVATED
+0230   1C03           01004         btfss   STATUS,C
+0231   2A39           01005         goto    sweep_off
+0232                  01006 sweep_on
+0232   184D           01007         btfsc   sweep_is_on,0           ;   if motor already enabled, exit
+0233   2A3D           01008         goto    sweep_exit
+0234   245F           01009         call    linesw_toggle_init      ;MJZ ADDED LINE, IF SWEEP MOTOR WAS JUST ENABLED, INIT LINESW_TO
+                            GGLE TO MATCH 2-LINE SWITCH VALUE
+0235   1587           01010         bsf     PORTC,SWEEP_EN          ;    enable sweep motor
+0236   104C           01011         bcf     rbif_bits,0             ;    don't check for sweep motor error for 1 second     
+0237   0ACD           01012         incf    sweep_is_on,f
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 21
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0238   2A3D           01013         goto    sweep_exit1
+0239                  01014 sweep_off
+0239   1C4D           01015         btfss   sweep_is_on,0
+023A   2A3D           01016         goto    sweep_exit
+023B   1187           01017         bcf     PORTC,SWEEP_EN          ; else disable sweep motor
+023C   01CD           01018         clrf    sweep_is_on
+023D                  01019 sweep_exit1:
+                      01020 ;       btfss   remote_toggle,REMOTE_BIT; if remote not enable,
+                      01021 ;       goto    sweep_exit
+                      01022 ;       movf    pwr_on_code,W           ;       if timeout or brown out
+                      01023 ;       btfsc   STATUS,Z
+                      01024 ;       goto    sweep_exit
+                      01025 ;       movwf   flash_code              ;               flash the reset type code 2 time
+                      01026 ;       call    flash_error
+                      01027 ;       movf    pwr_on_code,W
+                      01028 ;       movwf   flash_code
+                      01029 ;       call    flash_error
+                      01030 ;       bcf     led_bits,GREEN_LED
+023D                  01031 sweep_exit:
+023D   0008           01032         return
+                      01033 
+023E                  01034 sweep_remote:                           ; remote switch on
+023E   1CD0           01035         btfss   remote_toggle,SWEEP_BIT ;  set SWEEP output based on SWEEP_BIT
+023F   2A39           01036         goto    sweep_off
+0240   2A32           01037         goto    sweep_on
+                      01038 
+                      01039 ; check if remote enable switch had changed
+0241                  01040 update_remote:
+0241   0B36           01041         decfsz  init_done,W             ; if init not done, don't bother
+0242   2A5F           01042         goto    update_rmxit
+0243   0850           01043         movf    remote_toggle,W         ; pick up remote_toggle byte
+0244   3920           01044         andlw   REMOTE_ON
+0245   0607           01045         xorwf   PORTC,W                 ; exclusive or with PORTC
+0246   3920           01046         andlw   REMOTE_ON               ; did REMOTE_ON change value
+0247   1903           01047         btfsc   STATUS,Z                ; if no change, exit
+0248   2A5F           01048         goto    update_rmxit
+                      01049 ;       movlw   0x20
+                      01050 ;       movwf   remote_block            ; flush usart
+0249   3020           01051         movlw   REMOTE_ON
+024A   06D0           01052         xorwf   remote_toggle,F
+024B   1AD0           01053         btfsc   remote_toggle,REMOTE_BIT ; if remote switch just turned on,
+024C   2A60           01054         goto    remote_off
+                      01055 
+                      01056 ;       call    usart_enable
+024D   1683           01057         bsf     STATUS,RP0              ; goto bank 1
+024E   3081           01058         movlw   0x81                    ; 2400 baud
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+024F   0099           01059         movwf   SPBRG
+0250   3020           01060         movlw   0x20                    ; 8-bit transimit, transmitter enabled
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+0251   0098           01061         movwf   TXSTA                   ; asynchronous mode, low speed mode
+0252   1283           01062         bcf     STATUS,RP0              ; goto bank 0
+0253   3090           01063         movlw   0x90                    ; 8-bit receive, receiver enabled
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 22
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0254   0098           01064         movwf   RCSTA                   ; serial port enabled
+0255   081A           01065         movf    RCREG,W                 ; flush input data
+0256   081A           01066         movf    RCREG,W                 ; flush input data
+                      01067 
+                      01068 ;       movlw   REMOTE_ON
+                      01069 ;       iorlw   FEED_TOGGLE
+                      01070 ;       movwf   remote_toggle           ; then set remote and feed toggles
+0257   1450           01071         bsf     remote_toggle,FEED_BIT  ;   set feed toggle
+0258   184D           01072         btfsc   sweep_is_on,0           ;      if sweep is on
+0259   14D0           01073         bsf     remote_toggle,SWEEP_BIT ;         set sweep bit
+025A   084D           01074         movf    sweep_is_on,W           ; copy sweep_is_on flag to last_sweep
+025B   00D3           01075         movwf   last_sweep
+025C   304B           01076         movlw   BLOCK_CNT-8             ; short beep
+025D   00D1           01077         movwf   remote_block
+025E   23FD           01078         call    usart_disable
+025F                  01079 update_rmxit:
+025F   0008           01080         return
+0260                  01081 remote_off:
+                      01082 ;       call    usart_off
+0260   10D0           01083         bcf     remote_toggle,SWEEP_BIT ; turn off sweep_toggle
+0261   2C03           01084         goto    usart_off
+0262   0008           01085         return
+                      01086 ;
+                      01087 ; acquire reading on analog channel
+                      01088 ; enters: (a2d_chan) = chanel number
+                      01089 ; exits: W = result
+0263                  01090 acq_a2d
+0263   0EB3           01091         swapf   a2d_chan,F              ; move channel number
+0264   1003           01092         bcf     STATUS,C                ;  clear carry bit before rotate
+0265   0C33           01093         rrf     a2d_chan,W              ;  bits 5-3 in Wreg
+0266   3881           01094         iorlw   ADCON0VAL               ; or in FOSC/32, ADON
+0267   009F           01095         movwf   ADCON0                  ;  set ADC configuration and selecting analog chan
+                      01096                                         ;;acquisition delay - incr channel number for next op
+0268   0EB3           01097         swapf   a2d_chan,F              ; restore channel number
+0269   0AB3           01098         incf    a2d_chan,F              ; incr channel number
+026A   3005           01099         movlw   5                       ; mod 5 - only channels 0-4 valid
+026B   0233           01100         subwf   a2d_chan,W
+026C   1903           01101         btfsc   STATUS,Z
+026D   00B3           01102         movwf   a2d_chan                ;      wrap to 0 if next chan is 5
+                      01103 
+026E   3018           01104         movlw   0x18                    ; need 19.6us acquisition time
+026F   00C8           01105         movwf   delay
+0270                  01106 delaylp:
+0270   0BC8           01107         decfsz  delay,f
+0271   2A70           01108         goto    delaylp
+0272                  01109 WaitNoInt
+0272   0801           01110         movf    TMR0,W                  ; waiting till enough time
+0273   3CD0           01111         sublw   0d0h                    ; for one conversion before start
+0274   1C03           01112         btfss   STATUS,C                ; of the next timer interrupt
+0275   2A72           01113         goto    WaitNoInt               ; (Conv can be disturbed by an intr)
+0276   151F           01114         bsf     ADCON0,GO               ; start ADC
+0277                  01115 WaitAdc
+0277   191F           01116         btfsc   ADCON0,GO               ; waiting until ACDC...
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 23
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0278   2A77           01117         goto    WaitAdc                 ; ... is ready
+                      01118 ; result is waiting in ADRES, but first select next channel and start acquisition
+0279   0EB3           01119         swapf   a2d_chan,F              ; restore channel number
+027A   1003           01120         bcf     STATUS,C                ;  clear carry bit before rotate
+027B   0C33           01121         rrf     a2d_chan,W              ;  bits 5-3 in Wreg
+027C   3881           01122         iorlw   ADCON0VAL               ; or in FOSC/32, ADON
+027D   009F           01123         movwf   ADCON0                  ;  set ADC configuration and selecting analog chan
+027E   0EB3           01124         swapf   a2d_chan,F              ; restore channel number
+                      01125 
+027F   081E           01126         movf    ADRES,W                 ; put result into W-reg
+0280   0064           01127         clrwdt                          ; clear watch dog timer
+0281   0008           01128         return
+                      01129 
+                      01130 ; calculate desired top pwm
+0282                  01131 calc_top_pwm
+                      01132 ; first calculate speed based on no spin
+                      01133 ;       bcf     PORTB,RED_LED           ; test for calc_pwm overflow/roll over
+0282   308F           01134         movlw   0x8f                    ; minimum speed pot read allowed
+0283   0239           01135         subwf   spd_a2d,w
+0284   00BF           01136         movwf   delta_s                 ; delta_s = speed_a2d - 143
+0285   3E3D           01137         addlw   0x3d                    ; calc_pwm = 61 + delta_s, 61/255 = 24% duty cycle minimum pwm/s
+                            peed?
+0286   00BD           01138         movwf   calc_pwm
+0287   1003           01139         bcf     STATUS,C
+0288   0CBF           01140         rrf     delta_s,F               ; (div by 2)
+0289   083F           01141         movf    delta_s,w
+028A   07BD           01142         addwf   calc_pwm,F              ;               + delta_s / 2
+028B   1003           01143         bcf     STATUS,C
+028C   0CBF           01144         rrf     delta_s,f               ; (div by 4)
+028D   083F           01145         movf    delta_s,w
+028E   1003           01146         bcf     STATUS,C
+028F   07BD           01147         addwf   calc_pwm,F              ;               + delta_s / 4
+0290   1803           01148         btfsc   STATUS,C
+                      01149 ;       bsf     PORTB,RED_LED           ; test for calc_pwm overflow/roll over
+0291   2A9A           01150         goto    calc_pwm_roll           ; test for calc_pwm overflow/roll over
+0292   1003           01151         bcf     STATUS,C
+0293   0CBF           01152         rrf     delta_s,F               ; (div by 8)
+0294   1003           01153         bcf     STATUS,C
+0295   0CBF           01154         rrf     delta_s,F               ; (div by 16)
+0296   1003           01155         bcf     STATUS,C
+0297   0C3F           01156         rrf     delta_s,W               ; (div by 32)
+0298   02BD           01157         subwf   calc_pwm,f              ;               - delta_s / 32
+0299   2A9D           01158         goto    no_spin
+029A                  01159 calc_pwm_roll                           ; calc_pwm rolled over
+029A   1003           01160         bcf     STATUS,C
+029B   30FF           01161         movlw   0xff                    ; set to max duty cycle
+029C   00BD           01162         movwf   calc_pwm
+029D                  01163 no_spin
+                      01164 ;       movf    calc_pwm,w              ; DEBUG - force 100% PWM if 96%
+                      01165 ;       sublw   0xf3                    ; DEBUG
+                      01166 ;       btfss   STATUS,C                ; DEBUG if 96%, goto force 100%
+                      01167 ;       goto    force255_1              ; DEBUG
+029D   083D           01168         movf    calc_pwm,w
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 24
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+029E   00A4           01169         movwf   t_top_pwm
+029F   0008           01170         return
+                      01171 ;force255_1                             ; DEBUG
+                      01172 ;       movlw   0xff                    ; DEBUG
+                      01173 ;       movwf   t_top_pwm               ; DEBUG
+                      01174 ;       return                          ; DEBUG
+                      01175 
+02A0                  01176 power_is_off:
+                      01177 ; here at power on if detected the power switch is off
+                      01178 ;       btfsc   PORTB,0                 ; if RB0/INT bit is not set, power had been turned back on
+                      01179 ;       clrwdt                          ;  let wdt reset processor
+                      01180 
+02A0   0186           01181         clrf    PORTB                   ; turn off all LED
+02A1   083A           01182         movf    bat_a2d,w               ; get battery level
+02A2   3C99           01183         sublw   99h                     ; battery input at least 3.0V? (battery at least 13.2V)
+02A3   1803           01184         btfsc   STATUS,C                ;    skip if no borrow (> 3.0V)
+02A4   2AC2           01185         goto    charg_lt_3_0            ; charging, below 3.0V
+02A5   1903           01186         btfsc   STATUS,Z
+02A6   2AC2           01187         goto    charg_lt_3_0
+02A7   083A           01188         movf    bat_a2d,w
+                      01189 ;       sublw   0a3h                    ; battery input at least 3.2V? (battery at least 14.1V), MJZ COM
+                            MENTED THIS LINE
+02A8   3C9F           01190         sublw   09fh                    ;MJZ ADDED THIS LINE, battery input at least 3.1V? (battery at l
+                            east 13.7V)
+02A9   1803           01191         btfsc   STATUS,C                ;    skip if no borrow (> 3.2V)
+02AA   2AB9           01192         goto    charg_lt_3_2            ; charging, below 3.2V
+02AB   1903           01193         btfsc   STATUS,Z
+02AC   2AB9           01194         goto    charg_lt_3_2
+02AD   083A           01195         movf    bat_a2d,w
+                      01196 ;       sublw   0a8h                    ; battery input at least 3.3V? (battery at least 14.5V), MJZ COM
+                            MENTED THIS LINE
+02AE   3CA3           01197         sublw   0a3h                    ;MJZ ADDED THIS LINE, battery input at least 3.2V? (battery at l
+                            east 14.1V)
+02AF   1803           01198         btfsc   STATUS,C                ;    skip if no borrow (> 3.3V)
+02B0   2AB8           01199         goto    charg_lt_3_3
+02B1   1903           01200         btfsc   STATUS,Z
+02B2   2AB8           01201         goto    charg_lt_3_3
+                      01202                                         ; we are here because we are charging and power > 3.3V
+02B3   1506           01203         bsf     PORTB,GREEN_LED         ;   green on and red off
+02B4                  01204 wait_reset_lp:
+02B4   0064           01205         clrwdt
+                      01206 ;       btfss   PORTB,0         ; if RB0/INT bit is not set, power had been turned back on, MJZ COMMENTE
+                            D THIS LINE
+02B5   1E06           01207         btfss   PORTB,4         ;MJZ ADDED THIS LINE, POWER SWITCH NOW ON RB4
+02B6   1486           01208         bsf     PORTB,RED_LED           ;  set red led
+02B7   2AB4           01209         goto    wait_reset_lp           ; loop forever until charging power removed and system reset
+                      01210                                         ; 
+                      01211                                         ; 
+                      01212 
+02B8                  01213 charg_lt_3_3:                           ; charging, 3.2V < power level < 3.3V
+02B8   2ABA           01214         goto    flash_grn               ; we want red off and flashing green
+02B9                  01215 charg_lt_3_2:                           ; charging, 3.0V < power level < 3.2V
+                      01216 ;       bsf     PORTB,RED_LED           ; we want red on and flashing green, MJZ COMMENTED THIS LINE
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 25
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+02B9   2ABE           01217         goto    flash_red               ;MJZ ADDED THIS LINE, we want flashing red and green off
+02BA                  01218 flash_grn:
+02BA   1506           01219         bsf     PORTB,GREEN_LED         ; turn on green led
+02BB   3004           01220         movlw   GREEN_LED_ON
+02BC   00CA           01221         movwf   mult2                   ; bits to toggle
+02BD   2AC5           01222         goto    flash_com
+                      01223 
+02BE                  01224 flash_red:                                      ;MJZ ADDED THIS LINE
+02BE   1486           01225         bsf PORTB,RED_LED               ;MJZ ADDED THIS LINE, turn on red led
+02BF   3002           01226         movlw   RED_LED_ON              ;MJZ ADDED THIS LINE
+02C0   00CA           01227         movwf   mult2                   ;MJZ ADDED THIS LINE
+02C1   2AC5           01228         goto    flash_com               ;MJZ ADDED THIS LINE
+                      01229 
+02C2                  01230 charg_lt_3_0:                           ; charging, power level <= 3.0V
+                      01231 ;       bsf     PORTB,GREEN_LED         ; turn on green led, MJZ COMMENTED THIS LINE
+                      01232 ;       movlw   GREEN_LED_ON|RED_LED_ON ; toggle both red and green, only 1 on at a time, MJZ COMMENTED 
+                            THIS LINE
+                      01233 ;       movwf   mult2                   ;MJZ COMMENTED THIS LINE
+                      01234 
+02C2   1486           01235         bsf     PORTB,RED_LED           ;MJZ ADDED THIS LINE, we want red on and green off
+02C3   3000           01236         movlw   0                               ;MJZ ADDED THIS LINE
+02C4   00CA           01237         movwf   mult2                   ;MJZ ADDED THIS LINE
+                      01238 
+                      01239 
+                      01240 
+02C5                  01241 flash_com:
+02C5   3040           01242         movlw   0x40
+02C6   00C9           01243         movwf   mult1
+02C7                  01244 fgrn_loop:
+02C7   3004           01245         movlw   PAUSE_TIME
+02C8   2348           01246         call    wait
+02C9   3004           01247         movlw   PAUSE_TIME
+02CA   2348           01248         call    wait
+02CB   3004           01249         movlw   PAUSE_TIME
+02CC   2348           01250         call    wait
+02CD   084A           01251         movf    mult2,w                 ; get bits to toggle
+02CE   0686           01252         xorwf   PORTB,F                 ; toggle leds
+02CF   0BC9           01253         decfsz  mult1,f
+02D0   2AC7           01254         goto    fgrn_loop
+                      01255 ;       btfsc   PORTB,0                 ; if RB0/INT bit is not set, power had been turned back on      
+                            ;MJZ COMMENTED THIS LINE
+02D1   1A06           01256         btfsc   PORTB,4                 ;MJZ ADDED THIS LINE, POWER SWITCH NOW ON RB4
+02D2   2AED           01257         goto    pwr_off_lp              ;  let wdt reset the system
+02D3   3002           01258         movlw   2
+02D4   00B3           01259         movwf   a2d_chan                ; get battery level again
+02D5   2263           01260         call    acq_a2d
+02D6   00BA           01261         movwf   bat_a2d         
+02D7   2AA0           01262         goto    power_is_off
+                      01263 
+                      01264 
+                      01265 ; check if RB7:RB4 pins had changed state
+02D8                  01266 chk_rbif:
+                      01267 ;       btfss   INTCON,INTF             ; if RB0/INT flag is set, check if power switch is turned off
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 26
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      01268 ;       btfss   PORTB,0                 ; if power switch is turned off ;MJZ COMMENTED THIS LINE
+02D8   1E06           01269         btfss   PORTB,4                 ;MJZ ADDED THIS LINE, POWER SWITCH NOW ON RB4
+02D9   2AEE           01270         goto    chk_rbif3
+                      01271 ;       btfss   PORTB,0                 ; check power switch again      ;MJZ COMMENTED THIS LINE
+02DA   1E06           01272         btfss   PORTB,4                 ;MJZ ADDED THIS LINE, POWER SWITCH NOW ON RB4
+02DB   2AEE           01273         goto    chk_rbif3
+02DC   018B           01274         clrf    INTCON                  ; disable all intrs
+02DD   0197           01275         clrf    CCP1CON                 ; CCP1 Module is off
+02DE   019D           01276         clrf    CCP2CON                 ; CCP2 Module is off
+                      01277 ;       clrf    PORTC                   ; disable feed motor pwm
+02DF   3040           01278         movlw   BEEP_OFF                ; beep is off
+02E0   0087           01279         movwf   PORTC                   ; disable feed motor pwm
+                      01280                                         ; disable bottom serve motor pwm
+                      01281                                         ; disable top serve motor pwm
+                      01282                                         ; sweep motor disabled
+                      01283                                         ; elevation motor disabled
+02E1   0186           01284         clrf    PORTB                   ; turn off all LED
+02E2   0064           01285         clrwdt
+02E3   1506           01286         bsf     PORTB,GREEN_LED
+                      01287 ;       movlw   0x40
+02E4   3080           01288         movlw   0x80
+02E5   00C9           01289         movwf   mult1
+02E6                  01290 pwr_off_loop:
+02E6   3004           01291         movlw   PAUSE_TIME
+02E7   2348           01292         call    wait
+02E8   3006           01293         movlw   6                       ; red led on + green led on
+02E9   0686           01294         xorwf   PORTB,F                 ; toggle red and green led, only 1 on
+02EA   0BC9           01295         decfsz  mult1,f
+02EB   2AE6           01296         goto    pwr_off_loop
+                      01297 
+02EC   0186           01298         clrf    PORTB                   ; turn off all leds
+02ED                  01299 pwr_off_lp:
+                      01300 ;       btfsc   PORTB,0                 ; if RB0/INT bit is not set, power had been turned back on
+                      01301 ;       clrwdt                          ;  let wdt reset processor
+02ED   2AED           01302         goto    pwr_off_lp
+                      01303 
+02EE                  01304 chk_rbif3:
+                      01305 ;       btfss   INTCON,INTF             ; if RB0/INT flag is set,       ;MJZ COMMENTED THIS LINE
+02EE   2AFF           01306         goto    chk_rbif1
+                      01307 
+                      01308 
+                      01309 
+                      01310 ;MJZ ADDED LINE, PREVIOUS VERSION HAD POWER SWITCH ON RB0/INT0.
+                      01311 ;MJZ ADDED LINE, CHK_RBIF2 WOULD HAVE BEEN RUN ONLY IF A POWER OFF ON RB0/INT0 SET INTF, BUT
+                      01312 ;MJZ ADDED LINE, WHEN RB0 WAS READ, THE POWER OFF CONDITION HAD ALREADY GONE AWAY, I.E. A SPURIOUS SIGNA
+                            L SET INTF.
+                      01313 ;MJZ ADDED LINE, THE INTF WAS CHECKED FOR IN CHK_RBIF3, SO TO BE SAFE THAT LINE IS NOW COMMENTED SO CHK_
+                            RBIF2 WOULD NEVER RUN.
+                      01314 ;MJZ ADDED LINE, POWER OFF IS NOW DETECTED ON RB4 WHICH USED TO BE SWEEP MOTOR ERROR DETECTION.
+                      01315 ;MJZ ADDED LINE, SWEEP MOTOR ERROR USED TO BE ON RB4, BUT NONE OF THAT LOGIC IS TAKEN OUT, BECAUSE THE P
+                            OWER OFF DETECTION CODE
+                      01316 ;MJZ ADDED LINE, IS EXECUTED BEFORE MOTOR ERROR CODE, SO IF RB4 IS SET, A POWER OFF IS DETECTED.
+                      01317 ;MJZ ADDED LINE, BALL DROP IS NOW DETECTED ON RB0/INT0.
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 27
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      01318 
+                      01319 
+                      01320 
+02EF                  01321 chk_rbif2:
+02EF   30F9           01322         movlw   0xf9
+02F0   0586           01323         andwf   PORTB,F                 ; clear red and green led
+02F1   3004           01324         movlw   PAUSE_TIME
+02F2   2348           01325         call    wait
+02F3   1506           01326         bsf     PORTB,GREEN_LED
+02F4   3004           01327         movlw   PAUSE_TIME
+02F5   2348           01328         call    wait
+02F6   3006           01329         movlw   6
+02F7   0686           01330         xorwf   PORTB,F
+02F8   3004           01331         movlw   PAUSE_TIME
+02F9   2348           01332         call    wait
+02FA   3006           01333         movlw   6
+02FB   0686           01334         xorwf   PORTB,F
+02FC   30F9           01335         movlw   0xf9
+02FD   0586           01336         andwf   PORTB,F
+02FE   05C3           01337         andwf   led_bits,F
+                      01338 ;       bcf     INTCON,INTF                     ; MJZ commented this line, INTF now used for ball drop d
+                            etection.
+02FF                  01339 chk_rbif1:
+02FF   1C0B           01340         btfss   INTCON,RBIF             ; if RBIF is clear, return
+0300   0008           01341         return
+0301   0E06           01342         swapf   PORTB,w                 ; get RB7:RB4 in lower bits
+0302   100B           01343         bcf     INTCON,RBIF             ;  clear RBIF bit in INTCON
+                      01344 ;       andlw   0x0f                    ;  clear upper bits
+0303   054C           01345         andwf   rbif_bits,w             ;  and with mask
+0304   1903           01346         btfsc   STATUS,Z                ;  if zero, return
+0305   0008           01347         return
+0306   3006           01348         movlw   6                       ; wait 10us
+0307   00C4           01349         movwf   rbif_wait
+0308                  01350 rbif_lp
+0308   0E06           01351         swapf   PORTB,w                 ; double checking, get RB7:RB4 in lower bits
+                      01352 ;       andlw   0x0f                    ;  clear upper bits
+0309   054C           01353         andwf   rbif_bits,w             ;  and with mask
+030A   1903           01354         btfsc   STATUS,Z                ;  if zero, return
+030B   0008           01355         return
+030C   0BC4           01356         decfsz  rbif_wait,f
+030D   2B08           01357         goto    rbif_lp
+030E   0E06           01358         swapf   PORTB,w                 ; get RB7:RB4 in lower bits
+                      01359 ;       andlw   0x0f                    ;  clear upper bits
+030F   054C           01360         andwf   rbif_bits,w             ; and with mask
+0310   1903           01361         btfsc   STATUS,Z                ;  if zero, return
+0311   0008           01362         return
+0312   00C1           01363         movwf   err_no                  ; save as error number
+                      01364 ; motor error, disable all motors, flash error code
+                      01365 ;
+0313                  01366 motor_error
+                      01367         ; disable all motors
+0313   0064           01368         clrwdt
+0314   018B           01369         clrf    INTCON                  ; disable all intrs
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 28
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0315   0197           01370         clrf    CCP1CON                 ; CCP1 Module is off
+0316   019D           01371         clrf    CCP2CON                 ; CCP2 Module is off
+                      01372 ;       clrf    PORTC                   ; disable feed motor pwm
+0317   3040           01373         movlw   BEEP_OFF                ; disable feed motor pwm
+0318   0087           01374         movwf   PORTC                   ; disable bottom serve motor pwm
+                      01375                                         ; disable top serve motor pwm
+                      01376                                         ; sweep motor disabled
+                      01377                                         ; eleveation motor disabled
+0319   0186           01378         clrf    PORTB                   ; turn off all LED
+031A                  01379 moterr_lp
+031A   3002           01380         movlw   2
+031B   00C2           01381         movwf   flash_code
+031C   0841           01382         movf    err_no,w                ; get motor error bits
+031D   18C1           01383         btfsc   err_no,1                ; feed motor error
+031E   232C           01384         call    flash_error             ;  flash 2
+031F   3003           01385         movlw   3
+0320   00C2           01386         movwf   flash_code
+0321   19C1           01387         btfsc   err_no,3                ; top serve motor error
+0322   232C           01388         call    flash_error             ;  flash 3
+0323   3004           01389         movlw   4
+0324   00C2           01390         movwf   flash_code
+0325   1941           01391         btfsc   err_no,2                ; bottom serve motor error
+0326   232C           01392         call    flash_error             ;  flash 4
+0327   3005           01393         movlw   5
+0328   00C2           01394         movwf   flash_code
+                      01395 ;       btfsc   err_no,0                ; feed motor error      ;MJZ COMMENTED THIS LINE, SHOULD BE SWEE
+                            P MOTOR ERROR
+0329   1841           01396         btfsc   err_no,0                ; MJZ ADDED THIS LINE, SWEEP MOTOR ERROR
+032A   232C           01397         call    flash_error             ;  flash 5
+032B   2B1A           01398         goto    moterr_lp
+                      01399 
+032C                  01400 flash_error:
+                      01401 ;       movwf   flash_code              ; for err_no times,
+032C   1106           01402         bcf     PORTB,GREEN_LED         ;   turn off green led
+032D   3030           01403         movlw   FLASH_TIME
+032E   2348           01404         call    wait
+032F                  01405 flash_greenled
+032F   1506           01406         bsf     PORTB,GREEN_LED         ;   turn on green led
+0330   3030           01407         movlw   FLASH_TIME
+0331   2348           01408         call    wait
+0332   1106           01409         bcf     PORTB,GREEN_LED         ;   turn off green led
+0333   3030           01410         movlw   FLASH_TIME
+0334   2348           01411         call    wait
+0335   0BC2           01412         decfsz  flash_code,f
+0336   2B2F           01413         goto    flash_greenled
+                      01414 
+0337   3004           01415         movlw   PAUSE_TIME
+0338   00C2           01416         movwf   flash_code
+0339                  01417 pause
+0339   3030           01418         movlw   FLASH_TIME              ; now pause
+033A   2348           01419         call    wait
+033B   0BC2           01420         decfsz  flash_code,f
+033C   2B39           01421         goto    pause
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 29
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+033D   0008           01422         return
+                      01423 
+                      01424 
+                      01425 ; battery below 2.4V - disable all motors, LEDs green off and red flashing
+033E                  01426 bat_dead
+                      01427         ; disable all motors
+033E   0064           01428         clrwdt
+033F   018B           01429         clrf    INTCON                  ; disable all intrs
+0340   0197           01430         clrf    CCP1CON                 ; CCP1 Module is off
+0341   019D           01431         clrf    CCP2CON                 ; CCP2 Module is off
+                      01432 ;       clrf    PORTC                   ; disable feed motor pwm
+0342   3040           01433         movlw   BEEP_OFF                ; disable feed motor pwm
+0343   0087           01434         movwf   PORTC                   ; disable bottom serve motor pwm
+                      01435                                         ; disable top serve motor pwm
+                      01436                                         ; sweep motor disabled
+                      01437                                         ; elevation motor disabled
+0344   0186           01438         clrf    PORTB                   ; turn off all LED
+                      01439 
+                      01440 ;flash_redled                           ;MJZ COMMENTED THIS LINE
+                      01441 ;       movlw   RED_LED_ON              ;MJZ COMMENTED THIS LINE
+                      01442 ;       xorwf   PORTB,f                 ; toggle red LED, MJZ COMMENTED THIS LINE
+                      01443 ;       movlw   FLASH_TIME              ;MJZ COMMENTED THIS LINE
+                      01444 ;       call    wait                    ;MJZ COMMENTED THIS LINE
+                      01445 ;       goto    flash_redled    ;MJZ COMMENTED THIS LINE
+                      01446 
+                      01447 
+0345                  01448 bat_dead_loop                           ;MJZ ADDED THIS LINE
+0345   1486           01449         bsf             PORTB,RED_LED   ;MJZ ADDED THIS LINE, TURN ON RED LED
+0346   0064           01450         clrwdt
+0347   2B45           01451         goto    bat_dead_loop   ;MJZ ADDED THIS LINE
+                      01452 
+                      01453         
+                      01454 
+                      01455 ; wait (W) number of timer1 overflows
+                      01456 ; if (W) = 255, wait time is about 1.2 seconds
+0348                  01457 wait
+0348   00C0           01458         movwf   wait_cnt
+0349                  01459 waitlp
+0349   0064           01460         clrwdt
+034A   1C0C           01461         btfss   PIR1,TMR1IF             ; wait for timer1 to overflow
+034B   2B49           01462         goto    waitlp
+034C   30A8           01463         movlw   MSEC5_LSB               ; reset  timer1 to count up to 5 msec
+034D   008E           01464         movwf   TMR1L
+034E   3061           01465         movlw   MSEC5_MSB
+034F   008F           01466         movwf   TMR1H
+0350   100C           01467         bcf     PIR1,TMR1IF             ; clear timer1 overflow flag
+0351   0BC0           01468         decfsz  wait_cnt,f              ;  decrement wait_cnt
+0352   2B49           01469         goto    waitlp
+0353   0008           01470         return
+                      01471 
+                      01472 ; wait (W) number of timer1 overflows withou clearing watch dog timer
+                      01473 ; if (W) = 255, wait time is about 1.2 seconds
+0354                  01474 wait_no_clrwdt
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 30
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0354   00C0           01475         movwf   wait_cnt
+0355                  01476 waitlp1
+0355   1C0C           01477         btfss   PIR1,TMR1IF             ; wait for timer1 to overflow
+0356   2B55           01478         goto    waitlp1
+0357   30A8           01479         movlw   MSEC5_LSB               ; reset  timer1 to count up to 5 msec
+0358   008E           01480         movwf   TMR1L
+0359   3061           01481         movlw   MSEC5_MSB
+035A   008F           01482         movwf   TMR1H
+035B   100C           01483         bcf     PIR1,TMR1IF             ; clear timer1 overflow flag
+035C   0BC0           01484         decfsz  wait_cnt,f              ;  decrement wait_cnt
+035D   2B55           01485         goto    waitlp1
+035E   0008           01486         return
+                      01487 
+                      01488 ; initialize battery level on power up  
+035F                  01489 init_bat_level:
+035F   01C5           01490         clrf    power_level
+0360   083A           01491         movf    bat_a2d,w
+0361   3C84           01492         sublw   0x84                    ; 0x84 - bat_a2d
+0362   1C03           01493         btfss   STATUS,C                ; if no borrow, battery a2d is less than 2.6V
+0363   2B6E           01494         goto    init_pl_com                     ; if borrow, over 2.6V: power_level_tmp = 0
+0364   0AC5           01495         incf    power_level,f
+0365   083A           01496         movf    bat_a2d,w
+0366   3C80           01497         sublw   0x80                    ; 0x80 - bat_a2d
+0367   1C03           01498         btfss   STATUS,C                ; if no borrow, battery a2d is less than 2.5V
+0368   2B6E           01499         goto    init_pl_com             ; if borrow, over 2.5V: power_level_tmp = 1
+                      01500 ; less than 2.5V, about 10 mins left
+0369   0AC5           01501         incf    power_level,f
+036A   083A           01502         movf    bat_a2d,w
+036B   3C7A           01503         sublw   0x7a                    ; if battery less than 2.4V (0x7a - W)  
+036C   1803           01504         btfsc   STATUS,C                ;       skip if borrow set ( > 2.4V ): power_level_tmp = 2
+036D   0AC5           01505         incf    power_level,f   ;       if borrow, less then 2.4V: power_level_tmp = 3
+036E                  01506 init_pl_com:
+036E   0845           01507         movf    power_level,w
+036F   00C6           01508         movwf   power_level_r
+                      01509 ; fall through to set battery leds
+                      01510 
+                      01511 
+                      01512 ; update battery leds. Called every 16 seconds. Take the lowest value from the last 16 second period
+0370                  01513 update_bat_led:
+0370   0846           01514         movf    power_level_r,w
+0371   00C5           01515         movwf   power_level
+0372   3903           01516         andlw   0x03
+0373   1903           01517         btfsc   STATUS,Z                ; power level 0: > 2.6V
+0374   2B85           01518         goto    over2_6v
+0375   0BC5           01519         decfsz  power_level,f           ;
+0376   2B78           01520         goto    under2_5v
+0377   2B82           01521         goto    over2_5v                ; power level 1: > 2.5V
+                      01522 
+                      01523 
+0378                  01524 under2_5v
+0378   0BC5           01525         decfsz  power_level,f
+0379   2B3E           01526         goto    bat_dead                        ; power level 3: < 2.4V ;MJZ DEBUG, COMMENTED THIS LINE
+                      01527 ;       goto    over2_6v                        ;MJZ DEBUG, ADDED THIS LINE
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 31
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      01528 
+                      01529 ;between_2.4v_2.5v                              ; less than 2.5V, about 10 mins left (GREEN OFF RED ON),
+                             MJZ COMMENTED THIS LINE
+                      01530 ;       btfss   led_bits,GREEN_LED      ; if green led on, turn it off, MJZ COMMENTED THIS LINE
+                      01531 ;       goto    grn_off                         ;MJZ COMMENTED THIS LINE
+                      01532 ;       bcf     led_bits,GREEN_LED              ;MJZ COMMENTED THIS LINE
+                      01533 ;       bcf     PORTB,GREEN_LED                 ;MJZ COMMENTED THIS LINE
+037A                  01534 between_2.4v_2.5v:                              ;MJZ ADDED THIS LINE, BETWEEN 2.4V & 2.5V, GREEN OFF, RE
+                            D ON(FLASHING)
+037A   1106           01535         bcf             PORTB,GREEN_LED         ;MJZ ADDED THIS LINE
+037B   1486           01536         bsf             PORTB,RED_LED           ;MJZ ADDED THIS LINE
+037C   2B8C           01537         goto    bat_led_xit                     ;MJZ ADDED THIS LINE
+                      01538 
+                      01539 
+037D                  01540 grn_off:
+037D   18C3           01541         btfsc   led_bits,RED_LED        ; if red led off, turn it on
+037E   2B8C           01542         goto    bat_led_xit
+037F   14C3           01543         bsf     led_bits,RED_LED
+0380   1486           01544         bsf     PORTB,RED_LED
+0381   2B8C           01545         goto    bat_led_xit
+                      01546 
+                      01547 
+                      01548 
+                      01549 ;over2_5v:                                              ; between 2.5v and 2.7V - 1/3 capacity (GREEN ON
+                             RED ON), MJZ COMMENTED THIS LINE
+                      01550 ;       btfsc   led_bits,GREEN_LED      ; if green led off, turn it on, MJZ COMMENTED THIS LINE
+                      01551 ;       goto    grn_off                         ;MJZ COMMENTED THIS LINE
+                      01552 ;       bsf             led_bits,GREEN_LED      ;MJZ COMMENTED THIS LINE
+                      01553 ;       bsf             PORTB,GREEN_LED         ;MJZ COMMENTED THIS LINE
+                      01554 ;       goto    grn_off                         ; goto turn red led on if necessary, MJZ COMMENTED THIS 
+                            LINE
+0382                  01555 over2_5v:                                               ;MJZ ADDED THIS LINE, BETWEEN 2.5V & 2.7V - 1/3 
+                            CAPACITY (GREEN ON(FLASHING), RED OFF)
+0382   1086           01556         bcf             PORTB,RED_LED           ;MJZ ADDED THIS LINE, TURN OFF RED LED
+0383   1506           01557         bsf             PORTB,GREEN_LED         ;MJZ ADDED THIS LINE, TURN ON GREEN LED
+0384   2B8C           01558         goto    bat_led_xit                     ;MJZ ADDED THIS LINE
+                      01559 
+                      01560 
+                      01561 ;over2_6v:                                              ; greater than 2.6V, battery good       (GREEN O
+                            N RED OFF), MJZ COMMENTED THIS LINE
+                      01562 ;       btfsc   led_bits,GREEN_LED      ; if green led off, turn it on, MJZ COMMENTED THIS LINE
+                      01563 ;       goto    grn_on
+                      01564 ;       bsf     led_bits,GREEN_LED              ;MJZ COMMENTED THIS LINE
+                      01565 ;       bsf     PORTB,GREEN_LED                 ;MJZ COMMENTED THIS LINE
+0385                  01566 over2_6v:                                               ;MJZ ADDED THIS LINE, GREATER THAN 2.6V, BATTERY
+                             GOOD (GREEN ON, RED OFF)
+0385   1086           01567         bcf             PORTB,RED_LED           ;MJZ ADDED THIS LINE, TURN OFF RED LED
+0386   1506           01568         bsf             PORTB,GREEN_LED         ;MJZ ADDED THIS LINE, TURN ON GREEN LED
+0387   2B8C           01569         goto    bat_led_xit                     ;MJZ ADDED THIS LINE    
+                      01570 
+                      01571 
+0388                  01572 grn_on:
+0388   1CC3           01573         btfss   led_bits,RED_LED        ; if red led on, turn it off
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 32
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0389   2B8C           01574         goto    bat_led_xit
+038A   10C3           01575         bcf     led_bits,RED_LED
+038B   1086           01576         bcf     PORTB,RED_LED
+                      01577 
+038C                  01578 bat_led_xit:
+038C   0846           01579         movf    power_level_r,w
+038D   00C5           01580         movwf   power_level
+038E   3003           01581         movlw   3
+038F   00C6           01582         movwf   power_level_r
+0390   0008           01583         return  
+                      01584 
+                      01585 
+0391                  01586 record_bat_level:
+                      01587 ; within a 16second time period, record the lowest power level
+0391   01C7           01588         clrf    power_level_tmp
+0392   083A           01589         movf    bat_a2d,w
+0393   3C84           01590         sublw   0x84                    ; 0x84 - bat_a2d
+0394   1C03           01591         btfss   STATUS,C                ; if no borrow, battery a2d is less than 2.6V
+0395   2BA0           01592         goto    pl_com                  ; if borrow, over 2.6V: power_level_tmp = 0
+0396   0AC7           01593         incf    power_level_tmp,f
+0397   083A           01594         movf    bat_a2d,w
+0398   3C80           01595         sublw   0x80                    ; 0x80 - bat_a2d
+0399   1C03           01596         btfss   STATUS,C                ; if no borrow, battery a2d is less than 2.5V
+039A   2BA0           01597         goto    pl_com                  ; if borrow, over 2.5V: power_level_tmp = 1
+                      01598 ; less than 2.5V, about 10 mins left
+039B   0AC7           01599         incf    power_level_tmp,f
+039C   083A           01600         movf    bat_a2d,w
+039D   3C7A           01601         sublw   0x7a                    ; if battery less than 2.4V (0x7a - W)  
+039E   1803           01602         btfsc   STATUS,C                ;       skip if borrow set ( > 2.4V ): power_level_tmp = 2
+039F   0AC7           01603         incf    power_level_tmp,f       ;       if borrow, less then 2.4V: power_level_tmp = 3
+03A0                  01604 pl_com:
+03A0   0846           01605         movf    power_level_r,w         ; power_level_r - power_level_tmp
+03A1   0247           01606         subwf   power_level_tmp,w
+03A2   1803           01607         btfsc   STATUS,C                ; if borrow => power_level_tmp < power_level_r
+03A3   2BA6           01608         goto    no_bat_adjust
+03A4   0847           01609         movf    power_level_tmp,w       ;   power_level_r = new power level
+03A5   00C6           01610         movwf   power_level_r
+03A6                  01611 no_bat_adjust:
+03A6   0008           01612         return  
+                      01613 
+03A7                  01614 debug_led:
+03A7   083B           01615         movf    feed_a2d,w
+03A8   00C2           01616         movwf   flash_code
+03A9   0CC2           01617         rrf     flash_code,F
+03AA   0CC2           01618         rrf     flash_code,F
+03AB   0CC2           01619         rrf     flash_code,F
+03AC   0CC2           01620         rrf     flash_code,F
+03AD   0CC2           01621         rrf     flash_code,F
+03AE   0C42           01622         rrf     flash_code,W
+03AF   3903           01623         andlw   3
+03B0   3E01           01624         addlw   1
+03B1   00C2           01625         movwf   flash_code
+03B2   232C           01626         call    flash_error
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 33
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+03B3   083B           01627         movf    feed_a2d,w
+03B4   00C2           01628         movwf   flash_code
+03B5   0CC2           01629         rrf     flash_code,F
+03B6   0CC2           01630         rrf     flash_code,F
+03B7   0C42           01631         rrf     flash_code,W
+03B8   3907           01632         andlw   7
+03B9   3E01           01633         addlw   1
+03BA   00C2           01634         movwf   flash_code
+03BB   232C           01635         call    flash_error
+03BC   083B           01636         movf    feed_a2d,w
+03BD   3907           01637         andlw   7
+03BE   3E01           01638         addlw   1
+03BF   00C2           01639         movwf   flash_code
+03C0   232C           01640         call    flash_error
+                      01641 
+03C1   3003           01642         movlw   3
+03C2   00B3           01643         movwf   a2d_chan
+03C3   2263           01644         call    acq_a2d                 ; acquire chan3 a2d - feed rate
+03C4   00BB           01645         movwf   feed_a2d
+03C5   0064           01646         clrwdt
+03C6   2BA7           01647         goto    debug_led
+                      01648 
+                      01649 ; special 16 bit multiply routine
+                      01650 ;  temp:mult2 = mult2 x mult1
+                      01651 ; returns temp:mult2 / 64
+                      01652 ; returnw r2:r1 = mult2 x mult1
+                      01653 ;
+03C7                  01654 mult_sub:
+03C7   0849           01655         movf    mult1,W                 ; if either mult1 or mult2 is 0
+03C8   1903           01656         btfsc   STATUS,Z
+03C9   2BDD           01657         goto    mult_ret_0              ; returns 0
+03CA   084A           01658         movf    mult2,W                 ; if either mult1 or mult2 is 0
+03CB   1903           01659         btfsc   STATUS,Z
+03CC   2BDD           01660         goto    mult_ret_0              ; returns 0
+03CD   01CA           01661         clrf    mult2
+03CE   01A2           01662         clrf    temp
+03CF                  01663 mult_lp:
+03CF   07CA           01664         addwf   mult2,f                 ; add mult2 mult1 times (mult2 x mult1)
+03D0   1803           01665         btfsc   STATUS,C
+03D1   0AA2           01666         incf    temp,f
+03D2   0BC9           01667         decfsz  mult1,F
+03D3   2BCF           01668         goto    mult_lp
+03D4   084A           01669         movf    mult2,w
+03D5   00CE           01670         movwf   r1
+03D6   0822           01671         movf    temp,w
+03D7   00CF           01672         movwf   r2
+03D8   0DCA           01673         rlf     mult2,f                 ; div result by 64
+03D9   0DA2           01674         rlf     temp,f
+03DA   0DCA           01675         rlf     mult2,f
+03DB   0D22           01676         rlf     temp,w
+03DC   0008           01677         return
+                      01678 
+03DD                  01679 mult_ret_0
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 34
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+03DD   3400           01680         retlw   0
+                      01681 
+                      01682 
+                      01683 
+                      01684 ; special 16 bit multiply routine
+                      01685 ;  temp:mult2 = mult2 x mult1
+                      01686 ; returns (temp:mult2 + 63) / 64
+                      01687 ;
+03DE                  01688 mult_sub1:
+03DE   0849           01689         movf    mult1,W                 ; if either mult1 or mult2 is 0
+03DF   1903           01690         btfsc   STATUS,Z
+03E0   2BDD           01691         goto    mult_ret_0              ; returns 0
+03E1   084A           01692         movf    mult2,W                 ; if either mult1 or mult2 is 0
+03E2   1903           01693         btfsc   STATUS,Z
+03E3   2BDD           01694         goto    mult_ret_0              ; returns 0
+03E4   01CA           01695         clrf    mult2
+03E5   01A2           01696         clrf    temp
+03E6                  01697 mult_lp1:
+03E6   07CA           01698         addwf   mult2,f                 ; add mult2 mult1 times (mult2 x mult1)
+03E7   1803           01699         btfsc   STATUS,C
+03E8   0AA2           01700         incf    temp,f
+03E9   0BC9           01701         decfsz  mult1,F
+03EA   2BE6           01702         goto    mult_lp1
+03EB   303F           01703         movlw   0x3f
+03EC   07CA           01704         addwf   mult2,f                 
+03ED   1803           01705         btfsc   STATUS,C
+03EE   0AA2           01706         incf    temp,f                  ; temp:mult2 += 63
+03EF   0DCA           01707         rlf     mult2,f                 ; div result by 64
+03F0   0DA2           01708         rlf     temp,f
+03F1   0DCA           01709         rlf     mult2,f
+03F2   0D22           01710         rlf     temp,w
+03F3   0008           01711         return
+                      01712 
+                      01713 ; enable usart
+03F4                  01714 usart_enable:
+                      01715         ; init usart
+03F4   1683           01716         bsf     STATUS,RP0              ; goto bank 1
+                      01717 ;       movlw   0xff                    ; 1200 baud
+03F5   3081           01718         movlw   0x81                    ; 2400 baud
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+03F6   0099           01719         movwf   SPBRG
+03F7   3020           01720         movlw   0x20                    ; 8-bit transimit, transmitter enabled
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+03F8   0098           01721         movwf   TXSTA                   ; asynchronous mode, low speed mode
+03F9   1283           01722         bcf     STATUS,RP0              ; goto bank 0
+03FA   3090           01723         movlw   0x90                    ; 8-bit receive, receiver enabled
+03FB   0098           01724         movwf   RCSTA                   ; serial port enabled
+03FC   0008           01725         return
+                      01726 
+                      01727 ; disable usart
+03FD                  01728 usart_disable
+03FD   1683           01729         bsf     STATUS,RP0              ; goto bank 1
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 35
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+03FE   0198           01730         clrf    TXSTA                   ; disable transmitter
+03FF   1283           01731         bcf     STATUS,RP0              ; goto bank 0
+0400   0198           01732         clrf    RCSTA                   ; serial port disabled, receiver disabled
+                      01733 ;       bsf     PORTC,6                 ; beep is 30 ff's
+0401   1307           01734         bcf     PORTC,6                 ; beep is 30 00's
+0402   0008           01735         return
+                      01736 
+                      01737 ; disable usart with no beep
+0403                  01738 usart_off
+0403   1683           01739         bsf     STATUS,RP0              ; goto bank 1
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+0404   0198           01740         clrf    TXSTA                   ; disable transmitter
+0405   1283           01741         bcf     STATUS,RP0              ; goto bank 0
+0406   0198           01742         clrf    RCSTA                   ; serial port disabled, receiver disabled
+                      01743 ;       bcf     PORTC,6                 ; no beep - beep is 30 ff's
+0407   1707           01744         bsf     PORTC,6                 ; no beep - beep is 30 00's
+0408   0008           01745         return
+                      01746 
+                      01747 ; if there is data in RCREG, return in W (returned as 0x30 + data)
+0409                  01748 getchar:
+0409   0103           01749         clrw
+040A   1E8C           01750         btfss   PIR1,RCIF               ; if not input data, return 0 in W
+040B   0008           01751         return
+040C   081A           01752         movf    RCREG,W                 ; else read input data
+040D   3E30           01753         addlw   0x30
+040E   0008           01754         return
+                      01755 
+                      01756 ; get transmits status, 0 = not ok to send, 1 = ok to send
+040F                  01757 xmit_status:
+040F   0103           01758         clrw
+0410   1A0C           01759         btfsc   PIR1,TXIF               ; if xmit not empty, skip
+0411   3001           01760         movlw   1
+0412   0008           01761         return
+                      01762 
+                      01763 ; send data in (W) to usart
+0413                  01764 putchar:
+0413   0099           01765         movwf   TXREG                   ; write data to usart
+0414   0008           01766         return
+                      01767 
+                      01768 ; called every 5 msec to handle anything related to the remote control
+0415                  01769 chk_remote:
+0415   1AD0           01770         btfsc remote_toggle,REMOTE_BIT  ; if remote not enabled, exit
+0416   0008           01771         return
+0417   0851           01772         movf    remote_block,W          ; if remote blocking,
+0418   1903           01773         btfsc   STATUS,Z                ;
+0419   2C23           01774         goto    no_blocking
+041A   3C42           01775         sublw   0x42                    ;  if 100msec had elapsed,
+041B   1903           01776         btfsc   STATUS,Z                ;
+                      01777 ;       bcf     PORTC,6                 ;   turn off beep - beep is 30 ff's
+041C   1707           01778         bsf     PORTC,6                 ;   turn off beep - beep is 30 00's
+041D   0BD1           01779         decfsz  remote_block,F          ;  if last block,
+041E   0008           01780         return
+041F   23F4           01781         call    usart_enable            ;   re-enable usart
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 36
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0420   2409           01782         call    getchar                 ;   flush
+0421   2409           01783         call    getchar                 ;    input fifo
+0422   0008           01784         return
+                      01785 
+0423                  01786 no_blocking:
+0423   2409           01787         call    getchar
+0424   39FF           01788         andlw   0xff                    ; if no input, exit
+0425   1903           01789         btfsc   STATUS,Z
+0426   0008           01790         return
+0427   3C38           01791         sublw   0x38    
+0428   1903           01792         btfsc   STATUS,Z                ; got 8 from transmitter - toggle sweep function
+0429   2C35           01793         goto    sweep_toggled
+042A   3C06           01794         sublw   0x06
+042B   1903           01795         btfsc   STATUS,Z                ; got 2 from transmiiter - toggle feed functions
+042C   2C3A           01796         goto    feed_toggled
+042D   30A0           01797         movlw   0xa0
+042E   00D1           01798         movwf   remote_block
+                      01799 ;no long beep   call    usart_disable
+042F   2403           01800         call    usart_off               ; no long beep
+0430   0008           01801         return
+                      01802 
+0431                  01803 set_remote_block
+0431   3053           01804         movlw   BLOCK_CNT
+0432   00D1           01805         movwf   remote_block
+0433   23FD           01806         call    usart_disable
+0434   0008           01807         return
+                      01808 
+0435                  01809 sweep_toggled:
+0435   301E           01810         movlw   0x1e                    ; set up to send 30 FF's
+0436   00D2           01811         movwf   FF_count
+0437   3002           01812         movlw   SWEEP_TOGGLE
+0438   06D0           01813         xorwf   remote_toggle,F
+                      01814 ;       movlw   8                       ; DEBUG
+                      01815 ;       movwf   beep_count              ; DEBUG
+0439   2C31           01816         goto    set_remote_block
+                      01817 
+043A                  01818 feed_toggled:
+043A   301E           01819         movlw   0x1e                    ; set up to send 30 FF's
+043B   00D2           01820         movwf   FF_count
+043C   3001           01821         movlw   FEED_TOGGLE
+043D   06D0           01822         xorwf   remote_toggle,F
+                      01823 ;       movlw   2                       ; DEBUG
+                      01824 ;       movwf   beep_count              ; DEBUG
+043E   2C31           01825         goto    set_remote_block
+                      01826 
+                      01827 
+                      01828 
+                      01829 ; Current sweep/2-line switch configuration.
+                      01830 ; Sweep Enable SPST (On/Off) rocker, Sweep On / Sweep Off, input ot uC.
+                      01831 ; Sweep Mode SPDT (On/Off/On) rocker, Narrow 2-line / Continuous Sweep / Wide 2-line, either On position
+                             allows respective 2-line
+                      01832 ; limit switch to be input to the uC.
+                      01833 ; Sweep Enable switch  must be on for sweep motor to turn on in any sweep mode.
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 37
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      01834 ; Continuous sweep is when Sweep Mode Switch is off (center position), not allowing any 2-line limit swi
+                            tch detection.
+                      01835 ; Narrow or Wide 2-Line mode is when Sweep Mode Switch is on in either direction allowing either narrow 
+                            or wide limit
+                      01836 ; switch detection.
+                      01837 ; If sweep is on in continuous mode and then it is switched to any 2-line mode, a ball could be released
+                             before the sweep stops at 
+                      01838 ; a 2-line limit switch, because we do not know we are in 2-line mode until the first 2-line limit switc
+                            h is detected.
+                      01839 ; When a 2-line limit switch is detected (change of state), the feed motor speed is restricted so ball f
+                            eed rate is slower than
+                      01840 ; side to side sweep.
+                      01841 
+                      01842 
+043F                  01843 chk_2linesw:                                    ; called every 5ms
+043F   1C4D           01844         btfss   sweep_is_on,0           ; If sweep motor on flag is on, I.E. sweep switch or remote turn
+                            ed sweep on
+0440   2C72           01845         goto    normal_feed_rate        ; If sweep motor on flag is off, set feed rate to normal.
+                      01846 
+0441   1E05           01847         btfss   PORTA,LINESWBIT
+0442   2475           01848         call    restrict_feed_rate
+                      01849 
+                      01850 ; THE FOLLOWING TWO LINES CORRECTED THE PROBLEM IF IN 2-LINE MODE AND 2-LINE LIMIT SWITCH ON (MACHINE ST
+                            OPPED
+                      01851 ; AT 2-LINE), WHEN 2-LINE ROCKER WAS TURNED OFF, SWEEP MOTOR WOULD NOT START BACK UP UNTIL SWEEP SWITCH 
+                            WAS TOGGLED
+                      01852 
+0443   1A05           01853         btfsc   PORTA,LINESWBIT         ; IF 2-LINE LIMIT SWITCH IS OFF...
+0444   1587           01854         bsf             PORTC,SWEEP_EN          ; TURN ON SWEEP MOTOR
+                      01855 
+                      01856         
+                      01857 
+0445   0855           01858         movf    linesw_toggle,W         ; GET 2-LINE LIMIT SWITCH TOGGLE FLAG BYTE
+0446   3910           01859         andlw   0x10                            ; BIT 4 IS THE ACTUAL FLAG, GET RID OF OTHER BITS (THERE
+                             SHOULDN'T BE ANY)
+0447   0605           01860         xorwf   PORTA,W                         ; COMPARE TO PORTA
+0448   3910           01861         andlw   0x10                            ; GET RID OF EXTRA BITS AGAIN
+0449   1903           01862         btfsc   STATUS,Z                        ; DID 2-LINE LIMIT SWITCH CHANGE STATE?
+044A   2C4C           01863         goto    linesw_no_change        ;
+044B   2C55           01864         goto    linesw_change           ;
+044C                  01865 linesw_no_change:                               ; IF 2-LINE LIMIT SWITCH DID NOT CHANGE STATE
+044C   1E05           01866         btfss   PORTA,LINESWBIT         ; If 2-Line limit switch is on, don't do anything, otherwise sta
+                            rt sweep timer.
+044D   0008           01867         return
+044E   3000           01868         movlw   0                                       ;
+044F   0656           01869         xorwf   sweep_timer,W           ; IF SWEEP TIMER IS 0, 6 SECONDS SINCE LAST LINE SWITCH CLOSURE 
+                            DETECTED
+0450   1D03           01870         btfss   STATUS,Z                        ; THEN ASSUME NOT 2-LINE MODE AND SET FEED RATE BACK TO 
+                            NORMAL ALGORITHM
+0451   0008           01871         return                                          ; IF TIMER NOT EXPIRED, HAVEN'T WAITED LONG ENOU
+                            GH
+0452   3000           01872         movlw   0x00                            ; 0=NORMAL FEED RATE ALGORITHM
+0453   00D7           01873         movwf   feed_rate_type          ; SET FEED RATE TO NORMAL ALGORITHM
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 38
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0454   0008           01874         return                                          ;
+0455                  01875 linesw_change:                                  ; IF 2-LINE SWITCH DID CHANGE STATE
+                      01876 ;       movlw   0x01                            ; 1=RESTRICTED FEED RATE FOR 2-LINE MODE
+                      01877 ;       movwf   feed_rate_type          ; SET FEED RATE TO RESTRICTED FOR 2-LINE MODE
+0455   3006           01878         movlw   0x06                            ; 8 SECONDS
+0456   00D6           01879         movwf   sweep_timer                     ; START TIMER AT 6 SECONDS (REALLY x SEC, BECAUSE OF MIS
+                            CALCULATION WITH 5MS TIMER)
+0457   3010           01880         movlw   0x10                            ;
+0458   06D5           01881         xorwf   linesw_toggle,F         ; IF CHANGE (TOGGLE), PUT NEW VALUE IN LINESW_TOGGLE
+                      01882 ;       btfss   PORTA,LINESWBIT         ; CHECK FOR 2-LINE LIMIT SWITCH ON (LOW)
+                      01883 ;       bcf             PORTC,SWEEP_EN          ; IF 2-LINE LIMIT SWITCH IS ON, TURN OFF SWEEP MOTOR, TH
+                            EN LEAVE ROUTINE
+                      01884 ;       return                                          ; IF 2-LINE LIMIT SWITCH IS OFF, LEAVE ROUTINE
+0459   1A05           01885         btfsc   PORTA,LINESWBIT
+045A   0008           01886         return
+045B   3001           01887         movlw   0x01
+045C   00D7           01888         movwf   feed_rate_type
+045D   1187           01889         bcf             PORTC,SWEEP_EN
+045E   0008           01890         return
+045F                  01891 linesw_toggle_init:                             ; WHEN SWEEP IS JUST TURNED ON, MUST MATCH LINESW_TOGGLE
+                             VALUE TO 2-LINE SWITCH VALUE
+045F   1A05           01892         btfsc   PORTA,4                         ;
+0460   2C62           01893         goto    linesw_toggle_set       ;
+0461   2C65           01894         goto    linesw_toggle_clr       ;
+0462                  01895 linesw_toggle_set:                              ;
+0462   3010           01896         movlw   0x10                            ;
+0463   00D5           01897         movwf   linesw_toggle           ;
+0464   0008           01898         return                                          ;       
+0465                  01899 linesw_toggle_clr:                              ;
+0465   01D5           01900         clrf    linesw_toggle           ;
+0466   0008           01901         return                                          ;
+                      01902 
+                      01903 ; IF THERE WAS A LINESW_TOGGLE CHANGE AND 2-LINE LIMIT SWITCH IS NOW OFF (SWEEPING), START TIMER AT 0 (C
+                            LEAR), IF NOT
+                      01904 ; ANOTHER TOGGLE WITHIN APPROX. 6 SECONDS, THEN 2-LINE MODE IS NOW OFF AND USE NORMAL FEED RATE ALGORITH
+                            M.
+                      01905 ;
+                      01906 
+0467                  01907 chk_intf:                                               ; CALLED EVERY 5MS
+0467   1C4D           01908         btfss   sweep_is_on,0           ; IF SWEEP MOTOR ON FLAG IS ON
+0468   0008           01909         return                                          ;
+                      01910 ;       btfsc   INTCON,INTF                     ; CHECK FOR RB0/INT FLAG SET
+                      01911 ;       btfsc   PORTB,0                         ; Flag was set, now double check ball detect switch inpu
+                            t still on.
+                      01912 ;       return                                          ;
+                      01913 ;       goto    ball_dropped            ; Double checked that ball was dropped.
+0469   1C8B           01914         btfss   INTCON,INTF                     ; If RBO/INT flag set, double check switch is still on (
+                            debounce/noise filter).
+046A   0008           01915         return                                          ; If RBO/INT flag not set, return.
+046B   1C06           01916         btfss   PORTB,0                         ; If ball detect switch is still on, then ball was dropp
+                            ed.
+046C   2C6F           01917         goto    ball_dropped            ;
+046D   108B           01918         bcf             INTCON,INTF                     ; If ball detect switch is no longer on, it was 
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 39
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                            a spurious detection, clear INTF and return.
+046E   0008           01919         return
+046F                  01920 ball_dropped:                                   ;
+046F   1587           01921         bsf             PORTC,SWEEP_EN          ; ...THEN TURN ON SWEEP MOTOR
+0470   108B           01922         bcf             INTCON,INTF                     ;
+0471   0008           01923         return                                          ;
+0472                  01924 normal_feed_rate
+0472   3000           01925         movlw   0x00                            ; 0=Normal feed rate algorithm
+0473   00D7           01926         movwf   feed_rate_type          ; If sweep motor on flag is not on, set feed rate to normal.
+0474   0008           01927         return                                          ;
+0475                  01928 restrict_feed_rate
+0475   3001           01929         movlw   0x01
+0476   00D7           01930         movwf   feed_rate_type
+0477   0008           01931         return
+                      01932 
+                      01933 ; WHEN 2-LINE MODE (LINE LIMIT SWITCH) IS DETECTED, MUST REDUCE MAXIMUM BALL FEED RATE SO THAT TIME BETW
+                            EEN
+                      01934 ; BALLS FED IS LONGER THAN TIME TO SWEEP SIDE TO SIDE (APPROX. 5 SECONDS), I.E. LIMIT FEED MOTOR SPEED.
+                      01935 ; WHEN 2-LINE MODE IS NOT DETECTED FOR LONGER THAN A SIDE TO SIDE SWEEP, MUST GO BACK TO NORMAL FEED RAT
+                            E ALGORITHM.
+                      01936 
+                      01937 
+                      01938 
+0478                  01939 toggle_green_led:
+0478   3004           01940         movlw   GREEN_LED_ON    ; value to turn on green LED
+0479   0686           01941         xorwf   PORTB,f                 ; toggle green LED
+047A   0008           01942         return
+                      01943 
+047B                  01944 toggle_red_led:
+047B   3002           01945         movlw   RED_LED_ON              ; value to turn on red LED
+047C   0686           01946         xorwf   PORTB,f                 ; toggle red LED
+047D   0008           01947         return
+                      01948 
+                      01949 ; The following lines were a part of the fix for the ball jam problem at power-on.
+                      01950 ; If the machine was powered on and a ball that was already in the chute got jammed in the server wheels
+                            , the machine
+                      01951 ; would not shut down with an overcurrent error if the speed pot was set fairly low.
+                      01952 ; The top serve motor is the first to turn on and would cause the jam.
+                      01953 ; The jammed top server motor would just continue to draw excessive current until it's free-wheeling dio
+                            de would heat up and fail.
+                      01954 ; The changes dated 06/09/05 make the top serve motor spin up quickly at power-on, regardless of the pot
+                             setting.
+                      01955 ; Then if a ball gets jammed at power-on, enough current is present to trip the overcurrent circuit.
+047E                  01956 top_not_inited:                         ; 06/09/05 MJZ added this line
+047E   308F           01957         movlw   0x8f                    ; 06/09/05 MJZ added this line
+047F   00A4           01958         movwf   t_top_pwm               ; 06/09/05 MJZ added this line
+0480   0008           01959         return                                  ; 06/09/05 MJZ added this line
+                      01960 
+                      01961 ; The following lines and all lines dated 06/15/05 are changes that, at power-on, ramp up the bottom ser
+                            ve motor to fairly 
+                      01962 ; fast speed, regardless of the pot setting, before it is allowed to be set to the pot. When the changes
+                            , 06/09/05, were added
+                      01963 ; to ramp up the top serve motor at power-on, the top serve motor, if the speed pot was set low, would s
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 40
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                            low down before the 
+                      01964 ; bottom serve motor would start spinning. The bottom serve motor would pull a ball, that was already in
+                             the chute, into the
+                      01965 ; wheels and the serve motors would jam on the ball without overcurrent detection, because both motors a
+                            re drawing too little
+                      01966 ; current. Now the bottom serve motor will draw enough current at the ball jam time to trip the overcurr
+                            ent detection circuit.
+0481                  01967 bot_not_inited:                         ; 06/15/05 MJZ added this line
+0481   308F           01968         movlw   0x8f                    ; 06/15/05 MJZ added this line
+0482   00A6           01969         movwf   t_bot_pwm               ; 06/15/05 MJZ added this line
+0483   0008           01970         return                                  ; 06/15/05 MJZ added this line
+                      01971 
+                      01972 
+                      01973         END                       ; directive 'end of program'
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 41
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+ADCON0                            0000001F
+ADCON0VAL                         00000081
+ADCON1                            0000009F
+ADCON1VAL                         00000002
+ADCS0                             00000006
+ADCS1                             00000007
+ADIE                              00000006
+ADIF                              00000006
+ADON                              00000000
+ADRES                             0000001E
+BATTERY                           00000002
+BEEP_OFF                          00000040
+BF                                00000000
+BLOCK_CNT                         00000053
+BRGH                              00000002
+C                                 00000000
+CCP1CON                           00000017
+CCP1IE                            00000002
+CCP1IF                            00000002
+CCP1M0                            00000000
+CCP1M1                            00000001
+CCP1M2                            00000002
+CCP1M3                            00000003
+CCP1X                             00000005
+CCP1Y                             00000004
+CCP2CON                           0000001D
+CCP2IE                            00000000
+CCP2IF                            00000000
+CCP2M0                            00000000
+CCP2M1                            00000001
+CCP2M2                            00000002
+CCP2M3                            00000003
+CCP2X                             00000005
+CCP2Y                             00000004
+CCPR1                             00000015
+CCPR1H                            00000016
+CCPR1L                            00000015
+CCPR2                             0000001B
+CCPR2H                            0000001C
+CCPR2L                            0000001B
+CHS0                              00000003
+CHS1                              00000004
+CHS2                              00000005
+CKE                               00000006
+CKP                               00000004
+CREN                              00000004
+CSRC                              00000007
+D                                 00000005
+DATA_ADDRESS                      00000005
+DC                                00000001
+D_A                               00000005
+D_NOT_A                           00000005
+ELEV_EN                           00000004
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 42
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+F                                 00000001
+FEEDBIT                           00000003
+FEED_BIT                          00000000
+FEED_LED                          00000003
+FEED_TOGGLE                       00000001
+FERR                              00000002
+FF_count                          00000052
+FLASH_TIME                        00000030
+FSR                               00000004
+GIE                               00000007
+GO                                00000002
+GO_DONE                           00000002
+GO_NOT_DONE                       00000002
+GREEN_LED                         00000002
+GREEN_LED_ON                      00000004
+HighImpInt                        000000AF
+HighImpInt2                       000000B1
+HighImpShrt                       0000008B
+Highpulse                         00000086
+I2C_DATA                          00000005
+I2C_READ                          00000002
+I2C_START                         00000003
+I2C_STOP                          00000004
+INDF                              00000000
+INTCON                            0000000B
+INTCONVAL                         000000A0
+INTE                              00000004
+INTEDG                            00000006
+INTF                              00000001
+IRP                               00000007
+LINESWBIT                         00000004
+LowImpInt                         000000DD
+LowImpInt2                        000000DF
+LowImpShrt                        000000BA
+Lowpulse                          000000B6
+MSEC5_LSB                         000000A8
+MSEC5_MSB                         00000061
+NOT_A                             00000005
+NOT_ADDRESS                       00000005
+NOT_BO                            00000000
+NOT_BOR                           00000000
+NOT_DONE                          00000002
+NOT_PD                            00000003
+NOT_POR                           00000001
+NOT_RBPU                          00000007
+NOT_RC8                           00000006
+NOT_T1SYNC                        00000002
+NOT_TO                            00000004
+NOT_TX8                           00000006
+NOT_W                             00000002
+NOT_WRITE                         00000002
+OERR                              00000001
+OPTIONVAL                         000000C8
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 43
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+OPTION_REG                        00000081
+P                                 00000004
+PAUSE_TIME                        00000004
+PCFG0                             00000000
+PCFG1                             00000001
+PCFG2                             00000002
+PCL                               00000002
+PCLATH                            0000000A
+PCON                              0000008E
+PEIE                              00000006
+PIE1                              0000008C
+PIE2                              0000008D
+PIR1                              0000000C
+PIR2                              0000000D
+PMADR                             0000010D
+PMADRH                            0000010F
+PMCON1                            0000018C
+PMDATA                            0000010C
+PMDATH                            0000010E
+PORTA                             00000005
+PORTB                             00000006
+PORTC                             00000007
+PR2                               00000092
+PS0                               00000000
+PS1                               00000001
+PS2                               00000002
+PSA                               00000003
+PWM1                              00000002
+PWM2                              00000001
+PWMADJUSTVAL                      00000016
+PWMMAXVAL                         0000001D
+PWMOUTBIT                         00000000
+PwmInt                            00000083
+R                                 00000002
+RA0                               00000000
+RA1                               00000001
+RA2                               00000002
+RA3                               00000003
+RA4                               00000004
+RA5                               00000005
+RB0                               00000000
+RB1                               00000001
+RB2                               00000002
+RB3                               00000003
+RB4                               00000004
+RB5                               00000005
+RB6                               00000006
+RB7                               00000007
+RBIE                              00000003
+RBIF                              00000000
+RC0                               00000000
+RC1                               00000001
+RC2                               00000002
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 44
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+RC3                               00000003
+RC4                               00000004
+RC5                               00000005
+RC6                               00000006
+RC7                               00000007
+RC8_9                             00000006
+RC9                               00000006
+RCD8                              00000000
+RCIE                              00000005
+RCIF                              00000005
+RCREG                             0000001A
+RCSTA                             00000018
+RD                                00000000
+READ_WRITE                        00000002
+RED_LED                           00000001
+RED_LED_ON                        00000002
+REMOTE_BIT                        00000005
+REMOTE_ON                         00000020
+RP0                               00000005
+RP1                               00000006
+RX9                               00000006
+RX9D                              00000000
+R_NOT_W                           00000002
+R_W                               00000002
+S                                 00000003
+SMP                               00000007
+SPBRG                             00000099
+SPDBIT                            00000001
+SPEN                              00000007
+SPINPBIT                          00000000
+SREN                              00000005
+SSPADD                            00000093
+SSPBUF                            00000013
+SSPCON                            00000014
+SSPEN                             00000005
+SSPIE                             00000003
+SSPIF                             00000003
+SSPM0                             00000000
+SSPM1                             00000001
+SSPM2                             00000002
+SSPM3                             00000003
+SSPOV                             00000006
+SSPSTAT                           00000094
+STATUS                            00000003
+SWEEPEN                           00000004
+SWEEP_BIT                         00000001
+SWEEP_EN                          00000003
+SWEEP_TOGGLE                      00000002
+SYNC                              00000004
+T0CS                              00000005
+T0IE                              00000005
+T0IF                              00000002
+T0SE                              00000004
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 45
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+T1CKPS0                           00000004
+T1CKPS1                           00000005
+T1CON                             00000010
+T1INSYNC                          00000002
+T1OSCEN                           00000003
+T2CKPS0                           00000000
+T2CKPS1                           00000001
+T2CON                             00000012
+TICK_CNT                          00000057
+TMR0                              00000001
+TMR0IE                            00000005
+TMR0IF                            00000002
+TMR1                              0000000E
+TMR1CS                            00000001
+TMR1H                             0000000F
+TMR1IE                            00000000
+TMR1IF                            00000000
+TMR1L                             0000000E
+TMR1ON                            00000000
+TMR2                              00000011
+TMR2IE                            00000001
+TMR2IF                            00000001
+TMR2ON                            00000002
+TOUTPS0                           00000003
+TOUTPS1                           00000004
+TOUTPS2                           00000005
+TOUTPS3                           00000006
+TRISA                             00000085
+TRISA0                            00000000
+TRISA1                            00000001
+TRISA2                            00000002
+TRISA3                            00000003
+TRISA4                            00000004
+TRISA5                            00000005
+TRISAVAL                          0000003F
+TRISB                             00000086
+TRISB0                            00000000
+TRISB1                            00000001
+TRISB2                            00000002
+TRISB3                            00000003
+TRISB4                            00000004
+TRISB5                            00000005
+TRISB6                            00000006
+TRISB7                            00000007
+TRISBVAL                          000000F1
+TRISC                             00000087
+TRISC0                            00000000
+TRISC1                            00000001
+TRISC2                            00000002
+TRISC3                            00000003
+TRISC4                            00000004
+TRISC5                            00000005
+TRISC6                            00000006
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 46
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+TRISC7                            00000007
+TRISCVAL                          000000A0
+TRMT                              00000001
+TX8_9                             00000006
+TX9                               00000006
+TX9D                              00000000
+TXD8                              00000000
+TXEN                              00000005
+TXIE                              00000004
+TXIF                              00000004
+TXREG                             00000019
+TXSTA                             00000098
+UA                                00000001
+W                                 00000000
+WCOL                              00000007
+WaitAdc                           00000277
+WaitNoInt                         00000272
+Z                                 00000002
+_BODEN_OFF                        00003FBF
+_BODEN_ON                         00003FFF
+_BOREN_OFF                        00003FBF
+_BOREN_ON                         00003FFF
+_CONFIG                           00002007
+_CP_ALL                           00003FEF
+_CP_OFF                           00003FFF
+_CP_ON                            00003FEF
+_DEVID1                           00002006
+_FOSC_HS                          00003FFE
+_FOSC_LP                          00003FFC
+_FOSC_RC                          00003FFF
+_FOSC_XT                          00003FFD
+_HS_OSC                           00003FFE
+_IDLOC0                           00002000
+_IDLOC1                           00002001
+_IDLOC2                           00002002
+_IDLOC3                           00002003
+_LP_OSC                           00003FFC
+_PWRTE_OFF                        00003FFF
+_PWRTE_ON                         00003FF7
+_RC_OSC                           00003FFF
+_WDTE_OFF                         00003FFB
+_WDTE_ON                          00003FFF
+_WDT_OFF                          00003FFB
+_WDT_ON                           00003FFF
+_XT_OSC                           00003FFD
+__16F73                           00000001
+a2d_chan                          00000033
+acq_a2d                           00000263
+at0sec                            00000046
+at10sec                           00000104
+at11sec                           00000104
+at12sec                           00000105
+at13sec                           00000105
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 47
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+at14sec                           00000106
+at15sec                           00000108
+at1sec                            000000E3
+at2sec                            000000FA
+at3sec                            000000FA
+at4sec                            000000FB
+at5sec                            000000FC
+at6sec                            000000FF
+at7sec                            00000100
+at8sec                            00000103
+at9sec                            00000104
+atcom                             00000107
+ball_dropped                      0000046F
+bat_a2d                           0000003A
+bat_dead                          0000033E
+bat_dead_loop                     00000345
+bat_led_xit                       0000038C
+beep_count                        00000054
+between_2.4v_2.5v                 0000037A
+bot_inited                        00000029
+bot_not_inited                    00000481
+c_bot_pwm                         00000027
+c_top_pwm                         00000025
+calc_feed                         000001EB
+calc_pwm                          0000003D
+calc_pwm_roll                     0000029A
+calc_top_pwm                      00000282
+charg_lt_3_0                      000002C2
+charg_lt_3_2                      000002B9
+charg_lt_3_3                      000002B8
+chk_2linesw                       0000043F
+chk_feed_rate_type                0000018F
+chk_feed_xit                      00000210
+chk_intf                          00000467
+chk_rbif                          000002D8
+chk_rbif1                         000002FF
+chk_rbif2                         000002EF
+chk_rbif3                         000002EE
+chk_remote                        00000415
+counter                           0000002E
+counter2                          0000002F
+debug_led                         000003A7
+dec_top                           000001B6
+dec_top_by_8                      000001BC
+delay                             00000048
+delaylp                           00000270
+delta_c                           0000003E
+delta_s                           0000003F
+enable_feed                       000001D7
+err_no                            00000041
+feed_a2d                          0000003B
+feed_inited                       0000002A
+feed_off                          000001CB
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 48
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+feed_ok                           00000140
+feed_ok1                          00000197
+feed_rate_type                    00000057
+feed_toggled                      0000043A
+fgrn_loop                         000002C7
+flash_code                        00000042
+flash_com                         000002C5
+flash_error                       0000032C
+flash_greenled                    0000032F
+flash_grn                         000002BA
+flash_red                         000002BE
+getchar                           00000409
+grn_off                           0000037D
+grn_on                            00000388
+i_second                          0000006F
+idle                              00000047
+inc_top_by_8                      000001B3
+init_bat_level                    0000035F
+init_done                         00000036
+init_enable_feed                  00000221
+init_feed_pwm                     00000211
+init_feed_xit                     00000229
+init_pl_com                       0000036E
+init_update_feed                  00000227
+last_sweep                        00000053
+led_bits                          00000043
+linesw_change                     00000455
+linesw_no_change                  0000044C
+linesw_toggle                     00000055
+linesw_toggle_clr                 00000465
+linesw_toggle_init                0000045F
+linesw_toggle_set                 00000462
+main                              00000010
+moterr_lp                         0000031A
+motor_error                       00000313
+msec5                             00000035
+mult1                             00000049
+mult2                             0000004A
+mult3                             0000004B
+mult_lp                           000003CF
+mult_lp1                          000003E6
+mult_ret_0                        000003DD
+mult_sub                          000003C7
+mult_sub1                         000003DE
+no_bat_adjust                     000003A6
+no_blocking                       00000423
+no_remote_feed                    000001C7
+no_spin                           0000029D
+normal_feed_rate                  00000472
+not_second                        00000064
+npwr_on_reset                     0000015D
+over1v                            000001D4
+over2_5v                          00000382
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 49
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+over2_6v                          00000385
+over_pt4_v                        0000021E
+pause                             00000339
+pl_com                            000003A0
+power_is_off                      000002A0
+power_level                       00000045
+power_level_r                     00000046
+power_level_tmp                   00000047
+putchar                           00000413
+pwmdesired                        00000030
+pwmhelp                           00000032
+pwmmax                            00000031
+pwr_off_loop                      000002E6
+pwr_off_lp                        000002ED
+pwr_on_code                       00000023
+pwr_on_reset                      00000161
+r1                                0000004E
+r2                                0000004F
+rbif_bits                         0000004C
+rbif_lp                           00000308
+rbif_wait                         00000044
+record_bat_level                  00000391
+remote_block                      00000051
+remote_off                        00000260
+remote_toggle                     00000050
+restrict_feed_rate                00000475
+sec0init                          0000010B
+seconds                           00000034
+set_pwm_value                     0000020E
+set_remote_block                  00000431
+set_top                           000001BE
+soft_pwm                          00000037
+spd_a2d                           00000039
+spin_a2d                          00000038
+stacks                            0000002D
+stackw                            0000002C
+status_temp                       00000021
+sweep_a2d                         0000003C
+sweep_exit                        0000023D
+sweep_exit1                       0000023D
+sweep_inited                      0000002B
+sweep_is_on                       0000004D
+sweep_off                         00000239
+sweep_on                          00000232
+sweep_remote                      0000023E
+sweep_timer                       00000056
+sweep_toggled                     00000435
+t_bot_pwm                         00000026
+t_top_pwm                         00000024
+temp                              00000022
+tick0                             00000167
+tick1                             00000174
+tick2                             0000017D
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 50
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+tick3                             00000182
+tick4                             00000198
+tick5                             0000019E
+tick6                             000001A0
+tick7                             000001A2
+toggle_green_led                  00000478
+toggle_red_led                    0000047B
+top_inited                        00000028
+top_not_inited                    0000047E
+under2_5v                         00000378
+upd_exit                          000001C0
+update_bat_led                    00000370
+update_feed                       000001E0
+update_feed_pwm                   000001C1
+update_remote                     00000241
+update_rmxit                      0000025F
+update_sweep                      0000022A
+update_top_pwm                    000001A6
+usart_disable                     000003FD
+usart_enable                      000003F4
+usart_off                         00000403
+w_temp                            00000020
+wait                              00000348
+wait_cnt                          00000040
+wait_no_clrwdt                    00000354
+wait_reset_lp                     000002B4
+waitlp                            00000349
+waitlp1                           00000355
+xmit_status                       0000040F
+
+
+MEMORY USAGE MAP ('X' = Used,  '-' = Unused)
+
+0000 : XX--XXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX
+0040 : XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX
+0080 : XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX
+00C0 : XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX
+0100 : XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX
+0140 : XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX
+0180 : XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX
+01C0 : XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX
+0200 : XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX
+0240 : XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX
+0280 : XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX
+02C0 : XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX
+0300 : XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 51
+
+
+MEMORY USAGE MAP ('X' = Used,  '-' = Unused)
+
+
+0340 : XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX
+0380 : XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX
+03C0 : XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX
+0400 : XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX
+0440 : XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX
+0480 : XXXX------------ ---------------- ---------------- ----------------
+2000 : -------X-------- ---------------- ---------------- ----------------
+
+All other memory blocks unused.
+
+Program Memory Words Used:  1154
+Program Memory Words Free:  2942
+
+
+Errors   :     0
+Warnings :     0 reported,     0 suppressed
+Messages :    21 reported,     0 suppressed
+
+

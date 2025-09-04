@@ -1,4 +1,3 @@
-; CS019B05, 08/07/09, changing code to slow down new serve motors from Hillhouse products.
 
 	list      p=16f73            ; list directive to define processor
 	#include <p16f73.inc>        ; processor specific variable definitions
@@ -492,7 +491,7 @@ at1sec
 ;	movlw	0x7f			; 50% duty cycle
 	movlw	0x19			; 10% duty cycle
 	movwf	CCPR1L			;
-	movwf	CCPR2L
+	clrf	CCPR2L
 	bsf	STATUS,RP0		; bank1
 	bcf	TRISC,PWM1		; make pin for pwm1 output
 	bcf	TRISC,PWM2		; make pin for pwm2 output
@@ -522,14 +521,6 @@ at4sec
 	goto	atcom
 
 at5sec
-
-; Bottom motor 10% duty cycle
-	movlw	0x19			; 06/15/05 MJZ change for ramping up bottom serve motor at power-on, now original 10% duty cycle 
-							; got changed before we got here.
-	movwf	t_bot_pwm		; 06/15/05 MJZ change for ramping up bottom serve motor at power-on
-	movwf	c_bot_pwm		; 06/15/05 MJZ change for ramping up bottom serve motor at power-on
-	movlw	0x19			; 06/15/05 MJZ change for ramping up bottom serve motor at power-on
-	movwf	CCPR2L			; 06/15/05 MJZ change for ramping up bottom serve motor at power-on
 
 	movlw	0x0c			; PWM mode, 2LSBs of duty cycle = 0
 ;	movlw	0x3c			; DEBUG PWM mode, 2LSBs of duty cycle = 11b (bottom)
@@ -741,29 +732,17 @@ tick1:
 	movlw	1
 	movwf	a2d_chan
 	call	acq_a2d			; acquire chan1 a2d - SPEED 
-;	movlw	0xfa			; SIM - force speed max
+;	movlw	0xff			; SIM - force speed max
 	movwf	spd_a2d
-; 08/07/09 start
-;	sublw	0x8f			; if spd_a2d < 143, 06/20/05 MJZ change to increase minimum serve motor speed for pressureless balls
-;	movlw	0x8f			; 06/20/05 MJZ change to increase minimum serve motor speed for pressureless balls
-;	sublw	0x98			; if spd_a2d < 152, 06/20/05 MJZ change to increase minimum serve motor speed for pressureless balls
-;	movlw	0x98			; 06/20/05 MJZ change to increase minimum serve motor speed for pressureless balls
-	sublw	0x8f
+	sublw	0x8f			; if spd_a2d < 143
 	movlw	0x8f
-; 08/07/09 end
 	btfsc	STATUS,C		;  skip if borrow - spd_a2d > 143
 	movwf	spd_a2d			;  if spd_a2d < 143, spd_a2d = 143
-	movf	spd_a2d,w		; 
-; 08/07/09 start
-	addlw	6	
-	movlw	0xfa			; if spd_a2d > 250
-	btfsc	STATUS,C		; 
-	movwf	spd_a2d			;  spd_a2d = 250
-;	addlw	0x20	
-;	movlw	0xe0			; if spd_a2d > 224, approx 85% of original max of 250
+;	movf	spd_a2d,w		; 
+;	addlw	6	
+;	movlw	0xfa			; if spd_a2d > 250
 ;	btfsc	STATUS,C		; 
-;	movwf	spd_a2d			;  spd_a2d = 224
-; 08/07/09 end
+;	movwf	spd_a2d			;  spd_a2d = 250
 	goto	idle
 
 tick2:
@@ -818,15 +797,11 @@ tick4:
 	goto	idle
 
 tick5:
-	call	calc_bot_pwm
 	call	calc_top_pwm
 	goto	idle
 
 tick6:
 	call	update_top_pwm
-;	call	update_top_pwm
-;	call	update_bot_pwm
-	call	update_bot_pwm
 	goto	idle
 
 tick7:
@@ -874,46 +849,6 @@ set_top:
 	movwf	c_top_pwm		;  save current top pwm value
 	movwf	CCPR1L			;  write new duty cycle value to PWM module 1
 upd_exit:
-	return
-
-update_bot_pwm:				; check if bottom pwm duty cycle need updating
-	decfsz	bot_inited,w		; if BOTTOM MOTOR PWM inited,
-;	goto	update_done		; 06/15/05 MJZ change, see next line
-	call	bot_not_inited	; 06/15/05 MJZ change for ramping up bottom serve motor at power-on
-	movf	c_bot_pwm,w		;  load current bottom pwm value into W
-	subwf	t_bot_pwm,w		;  W = target - current
-	btfsc	STATUS,Z		;  if current bottom pwm value = target bottom pwm value
-	goto	update_done		;   goto exit
-	btfss	STATUS,C		;  if current bottom pwm value < target ( no borrow)
-	goto    dec_bot			; 
-	andlw	0xf8			;  if delta < 8
-	btfss	STATUS,Z
-	goto	inc_bot_by_8
-	incf	c_bot_pwm,w		;   incr bottom pwm value and save to W
-	goto	set_bot
-inc_bot_by_8:
-;	movlw	8			; else inc bot pwm value by 8
-;	btfss	init_done,0		;      if init_done flag is set
-	movlw	4			;      else inc by 4
-	addwf	c_bot_pwm,w
-	goto	set_bot
-
-dec_bot:
-	sublw	0			; figure out delta to decr
-	andlw	0xf8			; if delta < 8
-	btfss	STATUS,Z
-	goto	dec_bot_by_8
-	decf	c_bot_pwm,w		;  dec bottom pwm value and save to W
-	goto	set_bot
-dec_bot_by_8
-;	movlw	8			; else dec bot pwm value by 8
-;	btfss	init_done,0		;      if init_done flag is set
-	movlw	4			;      else dec by 4
-	subwf	c_bot_pwm,w
-set_bot:
-	movwf	c_bot_pwm		;  save current bottom pwm value
-	movwf	CCPR2L			;  write new duty cycle value to PWM module 2
-update_done:
 	return
 
 ; if soft_pwm == 0
@@ -1192,348 +1127,39 @@ WaitAdc
 	clrwdt				; clear watch dog timer
 	return
 
-; calculate desired bottom pwm
-calc_bot_pwm
-; first calculate speed based on no spin
-; 08/07/09 start
-;	movlw	0x8f
-	movlw	0x8f			; minimum speed pot read allowed
-; 08/07/09 end
-	subwf	spd_a2d,w
-	movwf	delta_s			; delta_s = speed_a2d - 143
-; 08/07/09 start
-;	addlw	0x3d			; calc_pwm = 61 + delta_s
-;	addlw	0x3d			; calc_pwm = 61 + delta_s, 61/255 = 24% duty cycle minimum pwm/speed?
-	addlw	0x4a			; calc_pwm = 61 + delta_s, 72/255 = 29% duty cycle minimum pwm/speed?
-; 08/07/09 end
-	movwf	calc_pwm
-	bcf	STATUS,C
-	rrf	delta_s,F		; (div by 2)
-; 08/07/09 start
-;	movf	delta_s,w
-;	addwf	calc_pwm,F		;               + delta_s / 2
-; 08/07/09 end
-	bcf	STATUS,C
-	rrf	delta_s,f		; (div by 4)
-	movf	delta_s,w
-	addwf	calc_pwm,F		;               + delta_s / 4
-	bcf	STATUS,C
-	rrf	delta_s,F		; (div by 8)
-; 08/07/09 start
-	movf	delta_s,w
-	addwf	calc_pwm,F		;               + delta_s / 8
-; 08/07/09 end
-	bcf	STATUS,C
-	rrf	delta_s,F		; (div by 16)
-; 08/07/09 start
-	subwf	calc_pwm,f		;               - delta_s / 16
-; 08/07/09 end
-;	bcf	STATUS,C
-;	rrf	delta_s,W		; (div by 32)
-;	subwf	calc_pwm,f		;               - delta_s / 32
-; 08/07/09 end
-; now adjust based on spin
-	movf	spin_a2d,w
-	sublw	0xba			; 186 - spin_a2d
-	btfsc	STATUS,Z		; if 186 <= spin_a2d <= 191, then no spin
-	goto	no_spin1
-	btfsc	STATUS,C		; if spin_a2d < 186, then we have back spin (skip if borrow)
-	goto	adjust_backspin1
-	addlw	5			;
-	btfsc	STATUS,C		; if spin_a2d is 187,188,189,190 or 191, then no spin
-	goto	no_spin1
-	goto	adjust_topspin1
-adjust_backspin1:			; if spin_a2d < 186 then we have back spin
-	movlw	0xc5
-	subwf	spd_a2d,W		; speed_a2d - 197
-	btfsc	STATUS,C		; skip if borrow (slow speed)
-	goto	high_spd1
-	movlw	0x8f			; slow speed
-	subwf	spd_a2d,w
-	movwf	delta_s			; delta_s = speed_a2d - 143
-	movwf	mult1			; mult1 = 	delta_s
-	bcf	STATUS,C
-	rrf	delta_s,f		; (div by 2)
-	bcf	STATUS,C
-	rrf	delta_s,f		; (div by 4)
-	movf	delta_s,w
-	addwf	mult1,f			;		+ delta_s / 4
-	bcf	STATUS,C
-	rrf	delta_s,f		; (div by 8)
-	bcf	STATUS,C
-	rrf	delta_s,f		; (div by 16)
-	movf	delta_s,w
-	subwf	mult1,f			;		- delta_s / 16
-	bcf	STATUS,C
-	rrf	delta_s,w		; (div by 32)
-	addwf	mult1,f			;		+ delta_s / 32
-	movlw	0x0b
-	movwf	mult2
-	call	mult_sub		; W = 11 * mult1 / 64
-	movwf	mult1			; mult1 is maxspin for this speed
-	goto	adjust_bs1
-high_spd1:
-	movlw	0xc5
-	subwf	spd_a2d,W		; speed_a2d - 197
-	movwf	delta_s			; delta_s = speed_a2d - 197
-	movwf	mult1
-	bcf	STATUS,C
-	rrf	delta_s,f		; (div by 2)
-	bcf	STATUS,C
-	rrf	delta_s,f		; (div by 4)
-	movf	delta_s,w
-	addwf	mult1,f			;		+ delta_s / 4
-	bcf	STATUS,C
-	rrf	delta_s,f		; (div by 8)
-	bcf	STATUS,C
-	rrf	delta_s,f		; (div by 16)
-	movf	delta_s,w
-	subwf	mult1,f			;		- delta_s / 16
-	bcf	STATUS,C
-	rrf	delta_s,w		; (div by 32)
-	addwf	mult1,f			;		+ delta_s / 32
-	movlw	0x0b
-	movwf	mult2
-	call	mult_sub		; W = 11 * mult1 / 64
-	sublw	0x0b			; W = 11 - 11 * mult1 / 64
-	movwf	mult1			; mul1 is maxspin for this speed
-adjust_bs1:
-	movf	spin_a2d,w
-	sublw	0xba			; 186 - spin_a2d
-	movwf	delta_s			; amount of back spin desired (delta back_spin)
-	movwf	mult2			; max delta spin = delta_s
-	bcf	STATUS,C
-	rrf	delta_s,w		; (div by 2)
-	addwf	mult2,f			;		+ delta_s / 2
-	call	mult_sub		; W = maxspin * (delta back_spin) / 64
-	addwf	calc_pwm,f		; calc_pwm = calc_pwm + maxspin * (delta back_spin) / 64
-	goto	no_spin1
-
-adjust_topspin1:
-	movlw	0xbf			; mult1 = spin_a2d - 191
-	subwf	spin_a2d,w
-	movwf	mult1			; max top spin = delta_spin
-	movwf	delta_s
-	bcf	STATUS,C
-	rrf	delta_s,f		; (div by 2)
-	bcf	STATUS,C
-	rrf	delta_s,f		; (div by 4)
-	bcf	STATUS,C
-	rrf	delta_s,f		; (div by 8)
-	movf	delta_s,w
-	addwf	mult1,f			;		+ delta_spin / 8 
-	bcf	STATUS,C
-	rrf	delta_s,f		; (div by 16)
-	movf	delta_s,w
-	subwf	mult1,f			;		- delta_spin / 16
-	bcf	STATUS,C
-	rrf	delta_s,w		; (div by 32)
-	addwf	mult1,f			;               + delta_spin / 32
-
-	movlw	0xc5
-	subwf	spd_a2d,W		; delta speed = speed_a2d - 197
-	btfss	STATUS,C		; skip if no borrow (fast speed)
-	goto	slow_spd
-					; fast speed:
-	movwf	delta_s			; maxspin = delta_speed / 2
-	bcf	STATUS,C
-	rrf	delta_s,f		; (div by 2)
-	movf	delta_s,w
-	movwf	mult2
-	bcf	STATUS,C
-	rrf	delta_s,F		; (div by 4)
-	bcf	STATUS,C
-	rrf	delta_s,W		; (div by 8)
-	subwf	mult2,W			;           - delta_speed / 8
-	addlw	0x29			;	    + 41
-	goto	ts_com1
-
-slow_spd
-	movlw	0x29			; slow speed: maxspin = 41
-ts_com1
-	subwf	calc_pwm,w
-	movwf	mult2			; mult2 = calc_pwm - maxspin
-	call	mult_sub		; W = (max top spin) * (calc_pwm - maxspin) / 64
-	subwf	calc_pwm,f		; calc_pwm = calc_pwm - (196 - spin_a2d) * (calc_pwm - maxspin) / 64
-no_spin1
-;	movf	calc_pwm,w		; DEBUG - force 100% PWM if 96%
-;	sublw	0xf3			; DEBUG
-;	btfss	STATUS,C		; DEBUG if 96%, goto force 100%
-;	goto	force255		; DEBUG
-	movf	calc_pwm,w
-	movwf	t_bot_pwm
-	sublw	0x1f			; 41 - t_bot_pwm
-	btfss	STATUS,C		; skip if no borrow
-	return
-	movlw	0x1f
-	movwf	t_bot_pwm
-	return				;  make at least 41
-;force255				; DEBUG
-;	movlw	0xff			; DEBUG
-;	movwf	t_bot_pwm		; DEBUG
-;	return				; DEBUG
-
 ; calculate desired top pwm
 calc_top_pwm
 ; first calculate speed based on no spin
-; 08/07/09 start
-;	movlw	0x8f
+;	bcf	PORTB,RED_LED		; test for calc_pwm overflow/roll over
 	movlw	0x8f			; minimum speed pot read allowed
-; 08/07/09 end
 	subwf	spd_a2d,w
 	movwf	delta_s			; delta_s = speed_a2d - 143
-; 08/07/09 start
-;	addlw	0x3d			; calc_pwm = 61 + delta_s
-;	addlw	0x3d			; calc_pwm = 61 + delta_s, 61/255 = 24% duty cycle minimum pwm/speed?
-	addlw	0x4a			; calc_pwm = 61 + delta_s, 74/255 = 29% duty cycle minimum pwm/speed?
-; 08/07/09 end
+	addlw	0x3d			; calc_pwm = 61 + delta_s, 61/255 = 24% duty cycle minimum pwm/speed?
 	movwf	calc_pwm
 	bcf	STATUS,C
 	rrf	delta_s,F		; (div by 2)
-; 08/07/09 start
-;	movf	delta_s,w
-;	addwf	calc_pwm,F		;               + delta_s / 2
-; 08/07/09 end
+	movf	delta_s,w
+	addwf	calc_pwm,F		;               + delta_s / 2
 	bcf	STATUS,C
 	rrf	delta_s,f		; (div by 4)
 	movf	delta_s,w
+	bcf	STATUS,C
 	addwf	calc_pwm,F		;               + delta_s / 4
+	btfsc	STATUS,C
+;	bsf	PORTB,RED_LED		; test for calc_pwm overflow/roll over
+	goto	calc_pwm_roll		; test for calc_pwm overflow/roll over
 	bcf	STATUS,C
 	rrf	delta_s,F		; (div by 8)
-; 08/07/09 start
-	movf	delta_s,w
-	addwf	calc_pwm,F		;               + delta_s / 8
-; 08/07/09 end
 	bcf	STATUS,C
 	rrf	delta_s,F		; (div by 16)
-; 08/07/09 start
-	subwf	calc_pwm,f		;               - delta_s / 16
-; 08/07/09 end
-;	bcf	STATUS,C
-;	rrf	delta_s,W		; (div by 32)
-;	subwf	calc_pwm,f		;               - delta_s / 32
-; 08/07/09 end
-; now adjust based on spin
-	movf	spin_a2d,w
-	sublw	0xba			; 186 - spin_a2d
-	btfsc	STATUS,Z		; if spin_a2d is 186, then no spin
+	bcf	STATUS,C
+	rrf	delta_s,W		; (div by 32)
+	subwf	calc_pwm,f		;               - delta_s / 32
 	goto	no_spin
-	btfsc	STATUS,C		; if spin_a2d < 186, then we have back spin (skip if borrow)
-	goto	adjust_backspin
-	addlw	5			;
-	btfsc	STATUS,C		; if spin_a2d is 187-191, then no spin
-	goto	no_spin
-adjust_topspin:				; if spin_a2d > 197 then we have top spin
-	movlw	0xc5
-	subwf	spd_a2d,W		; speed_a2d - 197
-	btfsc	STATUS,C		; skip if borrow (slow speed)
-	goto	high_spd
-	movlw	0x8f			; slow speed
-	subwf	spd_a2d,w
-	movwf	delta_s			; delta_s = speed_a2d - 143
-	movwf	mult1			; mult1 = 	delta_s
+calc_pwm_roll				; calc_pwm rolled over
 	bcf	STATUS,C
-	rrf	delta_s,f		; (div by 2)
-	bcf	STATUS,C
-	rrf	delta_s,f		; (div by 4)
-	movf	delta_s,w
-	addwf	mult1,f			;		+ delta_s / 4
-	bcf	STATUS,C
-	rrf	delta_s,f		; (div by 8)
-	bcf	STATUS,C
-	rrf	delta_s,f		; (div by 16)
-	movf	delta_s,w
-	subwf	mult1,f			;		- delta_s / 16
-	bcf	STATUS,C
-	rrf	delta_s,w		; (div by 32)
-	addwf	mult1,f			;		+ delta_s / 32
-	movlw	0x0b
-	movwf	mult2
-	call	mult_sub		; W = 11 * mult1 / 64
-	movwf	mult1			; mult1 is maxspin for this speed
-	goto	adjust_ts
-high_spd:
-	movlw	0xc5
-	subwf	spd_a2d,W		; speed_a2d - 197
-	movwf	delta_s			; delta_s = speed_a2d - 197
-	movwf	mult1
-	bcf	STATUS,C
-	rrf	delta_s,f		; (div by 2)
-	bcf	STATUS,C
-	rrf	delta_s,f		; (div by 4)
-	movf	delta_s,w
-	addwf	mult1,f			;		+ delta_s / 4
-	bcf	STATUS,C
-	rrf	delta_s,f		; (div by 8)
-	bcf	STATUS,C
-	rrf	delta_s,f		; (div by 16)
-	movf	delta_s,w
-	subwf	mult1,f			;		- delta_s / 16
-	bcf	STATUS,C
-	rrf	delta_s,w		; (div by 32)
-	addwf	mult1,f			;		+ delta_s / 32
-	movlw	0x0b
-	movwf	mult2
-	call	mult_sub		; W = 11 * mult1 / 64
-	sublw	0x0b			; W = 11 - 11 * mult1 / 64
-	movwf	mult1			; mul1 is maxspin for this speed
-adjust_ts:
-	movlw	0xbf			; spin_a2d - 191
-	subwf	spin_a2d,w
-	movwf	delta_s			; amount of top spin desired (delta top_spin)
-	movwf	mult2			; max delta spin = delts_s
-	bcf	STATUS,C
-	rrf	delta_s,f		; (div by 2)
-	bcf	STATUS,C
-	rrf	delta_s,f		; (div by 4)
-	bcf	STATUS,C
-	rrf	delta_s,f		; (div by 8)
-	movf	delta_s,w
-	addwf	mult2,f			;		+ delta_s / 8
-	bcf	STATUS,C
-	rrf	delta_s,f		; (div by 16)
-	movf	delta_s,w
-	subwf	mult2,f			;		- delta_s / 16
-	bcf	STATUS,C
-	rrf	delta_s,w		; (div by 32)
-	addwf	mult2,f			;		+ delta_s / 32
-	call	mult_sub		; W = maxspin * (delta top_spin) / 64
-	addwf	calc_pwm,f
-	goto	no_spin
-
-adjust_backspin:
-	movf	spin_a2d,w
-	sublw	0xba			; mult1 = 186 - spin_a2d
-	movwf	mult1
-	bcf	STATUS,C		; max backspin = (186 - spin_a2d) * 3 / 2
-	rrf	mult1,w
-	addwf	mult1,f
-
-	movlw	0xc5
-	subwf	spd_a2d,W		; delta speed = speed_a2d - 197
-	btfss	STATUS,C		; skip if no borrow (fast speed)
-	goto	slow_spd1
-					; fast speed:
-	movwf	delta_s			; maxspin =
-	bcf	STATUS,C
-	rrf	delta_s,f		; (div by 2)
-	movf	delta_s,w		;           delta_speed / 2
-	movwf	mult2
-	bcf	STATUS,C
-	rrf	delta_s,f		; (div by 4)
-	bcf	STATUS,C		
-	rrf	delta_s,w		; (div by 8)
-	subwf	mult2,w			;           - delta_speed / 8
-	addlw	0x29			;           + 41
-	goto	bs_com
-
-slow_spd1
-	movlw	0x29
-bs_com
-	subwf	calc_pwm,w
-	movwf	mult2			; mult2 = calc_pwm - maxspin
-	call	mult_sub		; W = (max back spin) * (calc_pwm - maxspin) / 64
-	subwf	calc_pwm,f		; calc_pwm -= W
+	movlw	0xff			; set to max duty cycle
+	movwf	calc_pwm
 no_spin
 ;	movf	calc_pwm,w		; DEBUG - force 100% PWM if 96%
 ;	sublw	0xf3			; DEBUG
@@ -1543,7 +1169,7 @@ no_spin
 	movwf	t_top_pwm
 	return
 ;force255_1				; DEBUG
-;	movwf	0xff			; DEBUG
+;	movlw	0xff			; DEBUG
 ;	movwf	t_top_pwm		; DEBUG
 ;	return				; DEBUG
 
