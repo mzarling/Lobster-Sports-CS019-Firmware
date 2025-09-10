@@ -1,4 +1,4 @@
-MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE  1
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-10-2025  15:57:24         PAGE  1
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -57,7 +57,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
                             5)
   0000003F            00041 TRISAVAL        equ     3fh             ;00111111b: A0 - A5 as input
   00000002            00042 ADCON1VAL       equ     2               ; RA0,1,2,3,5 are analog        ;MJZ DEBUG, COMMENTED THIS LINE
-MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE  2
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-10-2025  15:57:24         PAGE  2
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -116,7 +116,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
   00000033            00091 a2d_chan        equ     0x33            ; next channel to acquire a2d
                       00092 
   00000034            00093 seconds         equ     0x34            ; seconds since poweron
-MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE  3
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-10-2025  15:57:24         PAGE  3
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -175,7 +175,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
                       00143 
                       00144 
                       00145 
-MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE  4
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-10-2025  15:57:24         PAGE  4
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -234,7 +234,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
 000E   0E20           00194                 swapf   w_temp,w          ; restore pre-isr W register contents
 000F   0009           00195                 retfie                    ; return from interrupt
                       00196 
-MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE  5
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-10-2025  15:57:24         PAGE  5
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -293,7 +293,7 @@ Message[302]: Register in operand not in bank 0.  Ensure that bank bits are corr
 0032   1283           00239         bcf     STATUS,RP0              ; register page 0
 0033   00A3           00240         movwf   pwr_on_code
 0034   3018           00241         movlw   0x18                    ; get NOT_TO and NOT_PD
-MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE  6
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-10-2025  15:57:24         PAGE  6
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -352,7 +352,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
                       00289 ;       movlw   0x55                    ; DEBUG
                       00290 ;       btfss   remote_toggle,REMOTE_BIT        ; DEBUG
                       00291 ;       call    putchar                 ; DEBUG
-MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE  7
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-10-2025  15:57:24         PAGE  7
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -411,7 +411,7 @@ Message[305]: Using default destination of 1 (file).
 007B   2904           00339         goto    at9sec
 007C   2904           00340         goto    at10sec
 007D   2904           00341         goto    at11sec
-MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE  8
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-10-2025  15:57:24         PAGE  8
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -470,7 +470,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
 00A6   1407           00392         bsf     PORTC,PWMOUTBIT         ; 3 cycles
 00A7   1407           00393         bsf     PORTC,PWMOUTBIT         ; 2 cycles
 00A8   1407           00394         bsf     PORTC,PWMOUTBIT         ; 1 cycle
-MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE  9
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-10-2025  15:57:24         PAGE  9
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -529,7 +529,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
 00D1   1007           00445         bcf     PORTC,PWMOUTBIT         ; 6 cycles
 00D2   1007           00446         bcf     PORTC,PWMOUTBIT         ; 5 cycles
 00D3   1007           00447         bcf     PORTC,PWMOUTBIT         ; 4 cycles
-MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 10
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-10-2025  15:57:24         PAGE 10
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -588,7 +588,7 @@ Message[302]: Register in operand not in bank 0.  Ensure that bank bits are corr
 00F2   1107           00496         bcf     TRISC,PWM1              ; make pin for pwm1 output
 Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
 00F3   1087           00497         bcf     TRISC,PWM2              ; make pin for pwm2 output
-MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 11
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-10-2025  15:57:24         PAGE 11
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -647,7 +647,7 @@ Message[302]: Register in operand not in bank 0.  Ensure that bank bits are corr
 0102   2907           00544         goto    atcom
                       00545 
                       00546 ; fall through to atcom
-MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 12
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-10-2025  15:57:24         PAGE 12
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -706,7 +706,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
 010A   2847           00596         goto    idle                    ; goto main idle loop
                       00597 
 010B                  00598 sec0init:
-MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 13
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-10-2025  15:57:24         PAGE 13
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -765,7 +765,7 @@ Message[302]: Register in operand not in bank 0.  Ensure that bank bits are corr
 0133   00BA           00647         movwf   bat_a2d         
 0134   3003           00648         movlw   3
 0135   00B3           00649         movwf   a2d_chan
-MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 14
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-10-2025  15:57:24         PAGE 14
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -824,7 +824,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
 015C   0AA3           00699         incf    pwr_on_code,f
 015D                  00700 npwr_on_reset:                          ; not power on reset (and not watchdog timeout)
 015D   3006           00701         movlw   6
-MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 15
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-10-2025  15:57:24         PAGE 15
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -883,7 +883,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
                       00752 ;       movlw   0xff                    ; SIM - force battery ok
 0180   00BA           00753         movwf   bat_a2d         
                       00754 ;       sublw   0x7a                    ; if battery less than 2.4V (0x7a - W)  
-MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 16
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-10-2025  15:57:24         PAGE 16
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -942,7 +942,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
 019F   2847           00801         goto    idle
                       00802 
 01A0                  00803 tick6:
-MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 17
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-10-2025  15:57:24         PAGE 17
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -1001,7 +1001,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
                       00853 
                       00854 ; if soft_pwm == 0
                       00855 ;   if input >= 1.0 volt, enable software pwm
-MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 18
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-10-2025  15:57:24         PAGE 18
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -1060,7 +1060,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
 01E4   3020           00906         movlw   0x20                    ;  if pwmdesired > 223
 01E5   0730           00907         addwf   pwmdesired,W            ;
 01E6   1C03           00908         btfss   STATUS,C                ;  
-MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 19
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-10-2025  15:57:24         PAGE 19
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -1119,7 +1119,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
                       00959 ; at 14 seconds, if pot > 50% duty cycle, init feed pwm to 50% duty cycle
 0211                  00960 init_feed_pwm:                          ; this gets called before feed_inited is set
 0211   083B           00961         movf    feed_a2d,w
-MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 20
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-10-2025  15:57:24         PAGE 20
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -1178,7 +1178,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
 0235   1587           01010         bsf     PORTC,SWEEP_EN          ;    enable sweep motor
 0236   104C           01011         bcf     rbif_bits,0             ;    don't check for sweep motor error for 1 second     
 0237   0ACD           01012         incf    sweep_is_on,f
-MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 21
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-10-2025  15:57:24         PAGE 21
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -1237,7 +1237,7 @@ Message[302]: Register in operand not in bank 0.  Ensure that bank bits are corr
 0251   0098           01061         movwf   TXSTA                   ; asynchronous mode, low speed mode
 0252   1283           01062         bcf     STATUS,RP0              ; goto bank 0
 0253   3090           01063         movlw   0x90                    ; 8-bit receive, receiver enabled
-MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 22
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-10-2025  15:57:24         PAGE 22
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -1296,7 +1296,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
 0276   151F           01114         bsf     ADCON0,GO               ; start ADC
 0277                  01115 WaitAdc
 0277   191F           01116         btfsc   ADCON0,GO               ; waiting until ACDC...
-MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 23
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-10-2025  15:57:24         PAGE 23
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -1355,7 +1355,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
                       01166 ;       btfss   STATUS,C                ; DEBUG if 96%, goto force 100%
                       01167 ;       goto    force255_1              ; DEBUG
 029D   083D           01168         movf    calc_pwm,w
-MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 24
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-10-2025  15:57:24         PAGE 24
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -1414,7 +1414,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
 02B8   2ABA           01214         goto    flash_grn               ; we want red off and flashing green
 02B9                  01215 charg_lt_3_2:                           ; charging, 3.0V < power level < 3.2V
                       01216 ;       bsf     PORTB,RED_LED           ; we want red on and flashing green, MJZ COMMENTED THIS LINE
-MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 25
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-10-2025  15:57:24         PAGE 25
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -1473,7 +1473,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
                       01265 ; check if RB7:RB4 pins had changed state
 02D8                  01266 chk_rbif:
                       01267 ;       btfss   INTCON,INTF             ; if RB0/INT flag is set, check if power switch is turned off
-MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 26
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-10-2025  15:57:24         PAGE 26
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -1532,7 +1532,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
                             OWER OFF DETECTION CODE
                       01316 ;MJZ ADDED LINE, IS EXECUTED BEFORE MOTOR ERROR CODE, SO IF RB4 IS SET, A POWER OFF IS DETECTED.
                       01317 ;MJZ ADDED LINE, BALL DROP IS NOW DETECTED ON RB0/INT0.
-MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 27
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-10-2025  15:57:24         PAGE 27
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -1591,7 +1591,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
                       01367         ; disable all motors
 0313   0064           01368         clrwdt
 0314   018B           01369         clrf    INTCON                  ; disable all intrs
-MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 28
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-10-2025  15:57:24         PAGE 28
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -1650,7 +1650,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
 033A   2348           01419         call    wait
 033B   0BC2           01420         decfsz  flash_code,f
 033C   2B39           01421         goto    pause
-MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 29
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-10-2025  15:57:24         PAGE 29
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -1709,7 +1709,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
                       01472 ; wait (W) number of timer1 overflows withou clearing watch dog timer
                       01473 ; if (W) = 255, wait time is about 1.2 seconds
 0354                  01474 wait_no_clrwdt
-MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 30
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-10-2025  15:57:24         PAGE 30
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -1768,7 +1768,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
 0378   0BC5           01525         decfsz  power_level,f
 0379   2B3E           01526         goto    bat_dead                        ; power level 3: < 2.4V ;MJZ DEBUG, COMMENTED THIS LINE
                       01527 ;       goto    over2_6v                        ;MJZ DEBUG, ADDED THIS LINE
-MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 31
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-10-2025  15:57:24         PAGE 31
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -1827,7 +1827,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
                       01571 
 0388                  01572 grn_on:
 0388   1CC3           01573         btfss   led_bits,RED_LED        ; if red led on, turn it off
-MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 32
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-10-2025  15:57:24         PAGE 32
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -1886,7 +1886,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
 03B0   3E01           01624         addlw   1
 03B1   00C2           01625         movwf   flash_code
 03B2   232C           01626         call    flash_error
-MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 33
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-10-2025  15:57:24         PAGE 33
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -1945,7 +1945,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
 03DC   0008           01677         return
                       01678 
 03DD                  01679 mult_ret_0
-MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 34
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-10-2025  15:57:24         PAGE 34
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -2004,7 +2004,7 @@ Message[302]: Register in operand not in bank 0.  Ensure that bank bits are corr
 03FD                  01728 usart_disable
 03FD   1683           01729         bsf     STATUS,RP0              ; goto bank 1
 Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
-MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 35
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-10-2025  15:57:24         PAGE 35
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -2063,7 +2063,7 @@ Message[302]: Register in operand not in bank 0.  Ensure that bank bits are corr
 041D   0BD1           01779         decfsz  remote_block,F          ;  if last block,
 041E   0008           01780         return
 041F   23F4           01781         call    usart_enable            ;   re-enable usart
-MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 36
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-10-2025  15:57:24         PAGE 36
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -2122,7 +2122,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
                              allows respective 2-line
                       01832 ; limit switch to be input to the uC.
                       01833 ; Sweep Enable switch  must be on for sweep motor to turn on in any sweep mode.
-MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 37
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-10-2025  15:57:24         PAGE 37
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -2181,7 +2181,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
                             GH
 0452   3000           01872         movlw   0x00                            ; 0=NORMAL FEED RATE ALGORITHM
 0453   00D7           01873         movwf   feed_rate_type          ; SET FEED RATE TO NORMAL ALGORITHM
-MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 38
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-10-2025  15:57:24         PAGE 38
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -2240,7 +2240,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
                             ed.
 046C   2C6F           01917         goto    ball_dropped            ;
 046D   108B           01918         bcf             INTCON,INTF                     ; If ball detect switch is no longer on, it was 
-MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 39
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-10-2025  15:57:24         PAGE 39
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -2299,7 +2299,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
                       01962 ; fast speed, regardless of the pot setting, before it is allowed to be set to the pot. When the changes
                             , 06/09/05, were added
                       01963 ; to ramp up the top serve motor at power-on, the top serve motor, if the speed pot was set low, would s
-MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 40
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-10-2025  15:57:24         PAGE 40
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -2319,7 +2319,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
                       01971 
                       01972 
                       01973         END                       ; directive 'end of program'
-MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 41
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-10-2025  15:57:24         PAGE 41
 
 
 SYMBOL TABLE
@@ -2378,7 +2378,7 @@ DC                                00000001
 D_A                               00000005
 D_NOT_A                           00000005
 ELEV_EN                           00000004
-MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 42
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-10-2025  15:57:24         PAGE 42
 
 
 SYMBOL TABLE
@@ -2437,7 +2437,7 @@ NOT_W                             00000002
 NOT_WRITE                         00000002
 OERR                              00000001
 OPTIONVAL                         000000C8
-MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 43
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-10-2025  15:57:24         PAGE 43
 
 
 SYMBOL TABLE
@@ -2496,7 +2496,7 @@ RBIF                              00000000
 RC0                               00000000
 RC1                               00000001
 RC2                               00000002
-MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 44
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-10-2025  15:57:24         PAGE 44
 
 
 SYMBOL TABLE
@@ -2555,7 +2555,7 @@ T0CS                              00000005
 T0IE                              00000005
 T0IF                              00000002
 T0SE                              00000004
-MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 45
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-10-2025  15:57:24         PAGE 45
 
 
 SYMBOL TABLE
@@ -2614,7 +2614,7 @@ TRISC3                            00000003
 TRISC4                            00000004
 TRISC5                            00000005
 TRISC6                            00000006
-MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 46
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-10-2025  15:57:24         PAGE 46
 
 
 SYMBOL TABLE
@@ -2673,7 +2673,7 @@ at10sec                           00000104
 at11sec                           00000104
 at12sec                           00000105
 at13sec                           00000105
-MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 47
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-10-2025  15:57:24         PAGE 47
 
 
 SYMBOL TABLE
@@ -2732,7 +2732,7 @@ err_no                            00000041
 feed_a2d                          0000003B
 feed_inited                       0000002A
 feed_off                          000001CB
-MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 48
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-10-2025  15:57:24         PAGE 48
 
 
 SYMBOL TABLE
@@ -2791,7 +2791,7 @@ not_second                        00000064
 npwr_on_reset                     0000015D
 over1v                            000001D4
 over2_5v                          00000382
-MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 49
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-10-2025  15:57:24         PAGE 49
 
 
 SYMBOL TABLE
@@ -2850,7 +2850,7 @@ temp                              00000022
 tick0                             00000167
 tick1                             00000174
 tick2                             0000017D
-MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 50
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-10-2025  15:57:24         PAGE 50
 
 
 SYMBOL TABLE
@@ -2902,7 +2902,7 @@ MEMORY USAGE MAP ('X' = Used,  '-' = Unused)
 0280 : XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX
 02C0 : XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX
 0300 : XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX
-MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-4-2025  11:52:57         PAGE 51
+MPASM 5.87             CS019-SINGLEWHEEL.ASM   9-10-2025  15:57:24         PAGE 51
 
 
 MEMORY USAGE MAP ('X' = Used,  '-' = Unused)
