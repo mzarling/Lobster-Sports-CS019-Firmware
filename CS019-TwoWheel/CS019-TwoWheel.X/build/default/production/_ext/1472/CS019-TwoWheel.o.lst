@@ -1,4 +1,4 @@
-MPASM 5.87                         CS019.ASM   9-17-2025  14:00:07         PAGE  1
+MPASM 5.87                CS019-TWOWHEEL.ASM   9-17-2025  14:12:51         PAGE  1
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -57,7 +57,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
   00000004            00041 SWEEPEN         equ     04h             ; analog input for sweep enable switch a/d channel 4 (PORTA bit 
                             5)
   0000003F            00042 TRISAVAL        equ     3fh             ;00111111b: A0 - A5 as input
-MPASM 5.87                         CS019.ASM   9-17-2025  14:00:07         PAGE  2
+MPASM 5.87                CS019-TWOWHEEL.ASM   9-17-2025  14:12:51         PAGE  2
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -116,7 +116,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
                       00091 
   00000033            00092 a2d_chan        equ     0x33            ; next channel to acquire a2d
                       00093 
-MPASM 5.87                         CS019.ASM   9-17-2025  14:00:07         PAGE  3
+MPASM 5.87                CS019-TWOWHEEL.ASM   9-17-2025  14:12:51         PAGE  3
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -175,7 +175,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
   00000054            00143 beep_count      equ     0x54            ; DEBUG
                       00144 
                       00145 
-MPASM 5.87                         CS019.ASM   9-17-2025  14:00:07         PAGE  4
+MPASM 5.87                CS019-TWOWHEEL.ASM   9-17-2025  14:12:51         PAGE  4
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -234,7 +234,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
 000D   0EA0           00194                 swapf   w_temp,f
 000E   0E20           00195                 swapf   w_temp,w          ; restore pre-isr W register contents
 000F   0009           00196                 retfie                    ; return from interrupt
-MPASM 5.87                         CS019.ASM   9-17-2025  14:00:07         PAGE  5
+MPASM 5.87                CS019-TWOWHEEL.ASM   9-17-2025  14:12:51         PAGE  5
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -293,7 +293,7 @@ Message[302]: Register in operand not in bank 0.  Ensure that bank bits are corr
 0031   140E           00239         bsf     PCON,NOT_BOR
 0032   1283           00240         bcf     STATUS,RP0              ; register page 0
 0033   00A3           00241         movwf   pwr_on_code
-MPASM 5.87                         CS019.ASM   9-17-2025  14:00:07         PAGE  6
+MPASM 5.87                CS019-TWOWHEEL.ASM   9-17-2025  14:12:51         PAGE  6
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -352,7 +352,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
 0054   2864           00289         goto    not_second
                       00290 ;       movlw   0x55                    ; DEBUG
                       00291 ;       btfss   remote_toggle,REMOTE_BIT        ; DEBUG
-MPASM 5.87                         CS019.ASM   9-17-2025  14:00:07         PAGE  7
+MPASM 5.87                CS019-TWOWHEEL.ASM   9-17-2025  14:12:51         PAGE  7
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -411,7 +411,7 @@ Message[305]: Using default destination of 1 (file).
 007A   2908           00339         goto    at8sec
 007B   2909           00340         goto    at9sec
 007C   2909           00341         goto    at10sec
-MPASM 5.87                         CS019.ASM   9-17-2025  14:00:07         PAGE  8
+MPASM 5.87                CS019-TWOWHEEL.ASM   9-17-2025  14:12:51         PAGE  8
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -470,7 +470,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
 00A5   1407           00392         bsf     PORTC,PWMOUTBIT         ; 4 cycles
 00A6   1407           00393         bsf     PORTC,PWMOUTBIT         ; 3 cycles
 00A7   1407           00394         bsf     PORTC,PWMOUTBIT         ; 2 cycles
-MPASM 5.87                         CS019.ASM   9-17-2025  14:00:07         PAGE  9
+MPASM 5.87                CS019-TWOWHEEL.ASM   9-17-2025  14:12:51         PAGE  9
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -529,7 +529,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
 00D0   1007           00445         bcf     PORTC,PWMOUTBIT         ; 7 cycles
 00D1   1007           00446         bcf     PORTC,PWMOUTBIT         ; 6 cycles
 00D2   1007           00447         bcf     PORTC,PWMOUTBIT         ; 5 cycles
-MPASM 5.87                         CS019.ASM   9-17-2025  14:00:07         PAGE 10
+MPASM 5.87                CS019-TWOWHEEL.ASM   9-17-2025  14:12:51         PAGE 10
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -588,7 +588,7 @@ Message[302]: Register in operand not in bank 0.  Ensure that bank bits are corr
 Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
 00F2   1107           00497         bcf     TRISC,PWM1              ; make pin for pwm1 output
 Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
-MPASM 5.87                         CS019.ASM   9-17-2025  14:00:07         PAGE 11
+MPASM 5.87                CS019-TWOWHEEL.ASM   9-17-2025  14:12:51         PAGE 11
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -647,7 +647,7 @@ Message[302]: Register in operand not in bank 0.  Ensure that bank bits are corr
 0104                  00541 at6sec
                       00542         
 0104   290C           00543         goto    atcom
-MPASM 5.87                         CS019.ASM   9-17-2025  14:00:07         PAGE 12
+MPASM 5.87                CS019-TWOWHEEL.ASM   9-17-2025  14:12:51         PAGE 12
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -706,7 +706,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
                       00591 ;       movwf   feed_a2d
                       00592 ;under_2_5
                       00593 ;       call    init_feed_pwm
-MPASM 5.87                         CS019.ASM   9-17-2025  14:00:07         PAGE 13
+MPASM 5.87                CS019-TWOWHEEL.ASM   9-17-2025  14:12:51         PAGE 13
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -765,7 +765,7 @@ Message[302]: Register in operand not in bank 0.  Ensure that bank bits are corr
 012C   3C8F           00642         sublw   0x8f                    ; if speed_a2d < 143
 012D   308F           00643         movlw   0x8f
 012E   1803           00644         btfsc   STATUS,C                ;  skip if borrow - speed_a2d > 143
-MPASM 5.87                         CS019.ASM   9-17-2025  14:00:07         PAGE 14
+MPASM 5.87                CS019-TWOWHEEL.ASM   9-17-2025  14:12:51         PAGE 14
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -824,7 +824,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
 0155   0AAB           00694         incf    sweep_inited,f          ; set flag to allow sweep motor control
                       00695 
 0156   1623           00696         bsf     pwr_on_code,NOT_TO      ; ignore watchdog timeout reset
-MPASM 5.87                         CS019.ASM   9-17-2025  14:00:07         PAGE 15
+MPASM 5.87                CS019-TWOWHEEL.ASM   9-17-2025  14:12:51         PAGE 15
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -883,7 +883,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
                       00747 ;       sublw   0x8f                    ; if spd_a2d < 143, 06/20/05 MJZ change to increase minimum serv
                             e motor speed for pressureless balls
                       00748 ;       movlw   0x8f                    ; 06/20/05 MJZ change to increase minimum serve motor speed for 
-MPASM 5.87                         CS019.ASM   9-17-2025  14:00:07         PAGE 16
+MPASM 5.87                CS019-TWOWHEEL.ASM   9-17-2025  14:12:51         PAGE 16
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -942,7 +942,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
 0196   1C03           00795         btfss   STATUS,C                ;  skip if no borrow - feed _a2d < 11
 0197   00BB           00796         movwf   feed_a2d                ;  if 17 < feed_a2d < 20, speed_a2d = 20
 0198   29A1           00797         goto    feed_ok1                ;MJZ ADDED LINE
-MPASM 5.87                         CS019.ASM   9-17-2025  14:00:07         PAGE 17
+MPASM 5.87                CS019-TWOWHEEL.ASM   9-17-2025  14:12:51         PAGE 17
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -1001,7 +1001,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
 01B4   0825           00844         movf    c_top_pwm,w             ;  load current top pwm value into W
 01B5   0224           00845         subwf   t_top_pwm,w             ;  W = (target - current)
 01B6   1903           00846         btfsc   STATUS,Z                ;  if current top pwm value equal target top pwm value
-MPASM 5.87                         CS019.ASM   9-17-2025  14:00:07         PAGE 18
+MPASM 5.87                CS019-TWOWHEEL.ASM   9-17-2025  14:12:51         PAGE 18
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -1060,7 +1060,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
 01DA   3004           00897         movlw   4                       ;      else inc by 4
 01DB   0727           00898         addwf   c_bot_pwm,w
 01DC   29E5           00899         goto    set_bot
-MPASM 5.87                         CS019.ASM   9-17-2025  14:00:07         PAGE 19
+MPASM 5.87                CS019-TWOWHEEL.ASM   9-17-2025  14:12:51         PAGE 19
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -1119,7 +1119,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
 01FB   0B37           00950         decfsz  soft_pwm,w              ; if soft_pwm was off
 01FC   29FE           00951         goto    enable_feed
 01FD   2A07           00952         goto    update_feed
-MPASM 5.87                         CS019.ASM   9-17-2025  14:00:07         PAGE 20
+MPASM 5.87                CS019-TWOWHEEL.ASM   9-17-2025  14:12:51         PAGE 20
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -1178,7 +1178,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
 0228   00BF           01003         movwf   delta_s                 ; delta_s is now new feed pwm value
 0229   0830           01004         movf    pwmdesired,w
 022A   023F           01005         subwf   delta_s,w               ; W = new pwm value - pwmdesired
-MPASM 5.87                         CS019.ASM   9-17-2025  14:00:07         PAGE 21
+MPASM 5.87                CS019-TWOWHEEL.ASM   9-17-2025  14:12:51         PAGE 21
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -1237,7 +1237,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
 0250   0008           01056         return
                       01057 
                       01058 
-MPASM 5.87                         CS019.ASM   9-17-2025  14:00:07         PAGE 22
+MPASM 5.87                CS019-TWOWHEEL.ASM   9-17-2025  14:12:51         PAGE 22
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -1296,7 +1296,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
 0269   2A86           01107         goto    update_rmxit
 026A   0850           01108         movf    remote_toggle,W         ; pick up remote_toggle byte
 026B   3920           01109         andlw   REMOTE_ON
-MPASM 5.87                         CS019.ASM   9-17-2025  14:00:07         PAGE 23
+MPASM 5.87                CS019-TWOWHEEL.ASM   9-17-2025  14:12:51         PAGE 23
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -1355,7 +1355,7 @@ Message[302]: Register in operand not in bank 0.  Ensure that bank bits are corr
 028C   0C33           01158         rrf     a2d_chan,W              ;  bits 5-3 in Wreg
 028D   3881           01159         iorlw   ADCON0VAL               ; or in FOSC/32, ADON
 028E   009F           01160         movwf   ADCON0                  ;  set ADC configuration and selecting analog chan
-MPASM 5.87                         CS019.ASM   9-17-2025  14:00:07         PAGE 24
+MPASM 5.87                CS019-TWOWHEEL.ASM   9-17-2025  14:12:51         PAGE 24
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -1414,7 +1414,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
 02AD   00BD           01209         movwf   calc_pwm
 02AE   1003           01210         bcf     STATUS,C
 02AF   0CBF           01211         rrf     delta_s,F               ; (div by 2)
-MPASM 5.87                         CS019.ASM   9-17-2025  14:00:07         PAGE 25
+MPASM 5.87                CS019-TWOWHEEL.ASM   9-17-2025  14:12:51         PAGE 25
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -1473,7 +1473,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
 02D4   0CBF           01262         rrf     delta_s,f               ; (div by 8)
 02D5   1003           01263         bcf     STATUS,C
 02D6   0CBF           01264         rrf     delta_s,f               ; (div by 16)
-MPASM 5.87                         CS019.ASM   9-17-2025  14:00:07         PAGE 26
+MPASM 5.87                CS019-TWOWHEEL.ASM   9-17-2025  14:12:51         PAGE 26
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -1532,7 +1532,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
 0305   00C9           01315         movwf   mult1                   ; max top spin = delta_spin
 0306   00BF           01316         movwf   delta_s
 0307   1003           01317         bcf     STATUS,C
-MPASM 5.87                         CS019.ASM   9-17-2025  14:00:07         PAGE 27
+MPASM 5.87                CS019-TWOWHEEL.ASM   9-17-2025  14:12:51         PAGE 27
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -1591,7 +1591,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
 032F   0008           01367         return
 0330   301F           01368         movlw   0x1f
 0331   00A6           01369         movwf   t_bot_pwm
-MPASM 5.87                         CS019.ASM   9-17-2025  14:00:07         PAGE 28
+MPASM 5.87                CS019-TWOWHEEL.ASM   9-17-2025  14:12:51         PAGE 28
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -1650,7 +1650,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
 0346   3CBA           01418         sublw   0xba                    ; 186 - spin_a2d
 0347   1903           01419         btfsc   STATUS,Z                ; if spin_a2d is 186, then no spin
 0348   2BB3           01420         goto    no_spin
-MPASM 5.87                         CS019.ASM   9-17-2025  14:00:07         PAGE 29
+MPASM 5.87                CS019-TWOWHEEL.ASM   9-17-2025  14:12:51         PAGE 29
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -1709,7 +1709,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
 0379   02C9           01471         subwf   mult1,f                 ;               - delta_s / 16
 037A   1003           01472         bcf     STATUS,C
 037B   0C3F           01473         rrf     delta_s,w               ; (div by 32)
-MPASM 5.87                         CS019.ASM   9-17-2025  14:00:07         PAGE 30
+MPASM 5.87                CS019-TWOWHEEL.ASM   9-17-2025  14:12:51         PAGE 30
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -1768,7 +1768,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
 03A9   1003           01524         bcf     STATUS,C                
 03AA   0C3F           01525         rrf     delta_s,w               ; (div by 8)
 03AB   024A           01526         subwf   mult2,w                 ;           - delta_speed / 8
-MPASM 5.87                         CS019.ASM   9-17-2025  14:00:07         PAGE 31
+MPASM 5.87                CS019-TWOWHEEL.ASM   9-17-2025  14:12:51         PAGE 31
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -1827,7 +1827,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
 03C6   2BCE           01573         goto    charg_lt_3_3
 03C7   1903           01574         btfsc   STATUS,Z
 03C8   2BCE           01575         goto    charg_lt_3_3
-MPASM 5.87                         CS019.ASM   9-17-2025  14:00:07         PAGE 32
+MPASM 5.87                CS019-TWOWHEEL.ASM   9-17-2025  14:12:51         PAGE 32
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -1886,7 +1886,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
 03E2   245E           01624         call    wait
 03E3   084A           01625         movf    mult2,w                 ; get bits to toggle
 03E4   0686           01626         xorwf   PORTB,F                 ; toggle leds
-MPASM 5.87                         CS019.ASM   9-17-2025  14:00:07         PAGE 33
+MPASM 5.87                CS019-TWOWHEEL.ASM   9-17-2025  14:12:51         PAGE 33
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -1945,7 +1945,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
 0403   2C03           01676         goto    pwr_off_lp
                       01677 
 0404                  01678 chk_rbif3:
-MPASM 5.87                         CS019.ASM   9-17-2025  14:00:07         PAGE 34
+MPASM 5.87                CS019-TWOWHEEL.ASM   9-17-2025  14:12:51         PAGE 34
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -2004,7 +2004,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
 041E   0E06           01725         swapf   PORTB,w                 ; double checking, get RB7:RB4 in lower bits
                       01726 ;       andlw   0x0f                    ;  clear upper bits
 041F   054C           01727         andwf   rbif_bits,w             ;  and with mask
-MPASM 5.87                         CS019.ASM   9-17-2025  14:00:07         PAGE 35
+MPASM 5.87                CS019-TWOWHEEL.ASM   9-17-2025  14:12:51         PAGE 35
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -2063,7 +2063,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
 0443   3030           01777         movlw   FLASH_TIME
 0444   245E           01778         call    wait
 0445                  01779 flash_greenled
-MPASM 5.87                         CS019.ASM   9-17-2025  14:00:07         PAGE 36
+MPASM 5.87                CS019-TWOWHEEL.ASM   9-17-2025  14:12:51         PAGE 36
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -2122,7 +2122,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
                       01830 ; if (W) = 255, wait time is about 1.2 seconds
 045E                  01831 wait
 045E   00C0           01832         movwf   wait_cnt
-MPASM 5.87                         CS019.ASM   9-17-2025  14:00:07         PAGE 37
+MPASM 5.87                CS019-TWOWHEEL.ASM   9-17-2025  14:12:51         PAGE 37
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -2181,7 +2181,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
                       01883 ; fall through to set battery leds
                       01884 
                       01885 
-MPASM 5.87                         CS019.ASM   9-17-2025  14:00:07         PAGE 38
+MPASM 5.87                CS019-TWOWHEEL.ASM   9-17-2025  14:12:51         PAGE 38
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -2240,7 +2240,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
 0499   1506           01931         bsf             PORTB,GREEN_LED         ;MJZ ADDED THIS LINE, TURN ON GREEN LED
 049A   2CA2           01932         goto    bat_led_xit                     ;MJZ ADDED THIS LINE
                       01933 
-MPASM 5.87                         CS019.ASM   9-17-2025  14:00:07         PAGE 39
+MPASM 5.87                CS019-TWOWHEEL.ASM   9-17-2025  14:12:51         PAGE 39
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -2299,7 +2299,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
 04B9   2CBC           01982         goto    no_bat_adjust
 04BA   0847           01983         movf    power_level_tmp,w       ;   power_level_r = new power level
 04BB   00C6           01984         movwf   power_level_r
-MPASM 5.87                         CS019.ASM   9-17-2025  14:00:07         PAGE 40
+MPASM 5.87                CS019-TWOWHEEL.ASM   9-17-2025  14:12:51         PAGE 40
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -2358,7 +2358,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
 04E3   01CA           02035         clrf    mult2
 04E4   01A2           02036         clrf    temp
 04E5                  02037 mult_lp:
-MPASM 5.87                         CS019.ASM   9-17-2025  14:00:07         PAGE 41
+MPASM 5.87                CS019-TWOWHEEL.ASM   9-17-2025  14:12:51         PAGE 41
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -2417,7 +2417,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
 050A                  02088 usart_enable:
                       02089         ; init usart
 050A   1683           02090         bsf     STATUS,RP0              ; goto bank 1
-MPASM 5.87                         CS019.ASM   9-17-2025  14:00:07         PAGE 42
+MPASM 5.87                CS019-TWOWHEEL.ASM   9-17-2025  14:12:51         PAGE 42
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -2476,7 +2476,7 @@ Message[302]: Register in operand not in bank 0.  Ensure that bank bits are corr
                       02137 ; send data in (W) to usart
 0529                  02138 putchar:
 0529   0099           02139         movwf   TXREG                   ; write data to usart
-MPASM 5.87                         CS019.ASM   9-17-2025  14:00:07         PAGE 43
+MPASM 5.87                CS019-TWOWHEEL.ASM   9-17-2025  14:12:51         PAGE 43
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -2535,7 +2535,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
 054F   2D47           02190         goto    set_remote_block
                       02191 
 0550                  02192 feed_toggled:
-MPASM 5.87                         CS019.ASM   9-17-2025  14:00:07         PAGE 44
+MPASM 5.87                CS019-TWOWHEEL.ASM   9-17-2025  14:12:51         PAGE 44
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -2594,7 +2594,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
                              SHOULDN'T BE ANY)
 055D   0605           02234         xorwf   PORTA,W                         ; COMPARE TO PORTA
 055E   3910           02235         andlw   0x10                            ; GET RID OF EXTRA BITS AGAIN
-MPASM 5.87                         CS019.ASM   9-17-2025  14:00:07         PAGE 45
+MPASM 5.87                CS019-TWOWHEEL.ASM   9-17-2025  14:12:51         PAGE 45
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -2653,7 +2653,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
                       02278 ; ANOTHER TOGGLE WITHIN APPROX. 6 SECONDS, THEN 2-LINE MODE IS NOW OFF AND USE NORMAL FEED RATE ALGORITH
                             M.
                       02279 ;
-MPASM 5.87                         CS019.ASM   9-17-2025  14:00:07         PAGE 46
+MPASM 5.87                CS019-TWOWHEEL.ASM   9-17-2025  14:12:51         PAGE 46
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -2712,7 +2712,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
                       02324 ; If the machine was powered on and a ball that was already in the chute got jammed in the server wheels
                             , the machine
                       02325 ; would not shut down with an overcurrent error if the speed pot was set fairly low.
-MPASM 5.87                         CS019.ASM   9-17-2025  14:00:07         PAGE 47
+MPASM 5.87                CS019-TWOWHEEL.ASM   9-17-2025  14:12:51         PAGE 47
 
 
 LOC  OBJECT CODE     LINE SOURCE TEXT
@@ -2748,7 +2748,7 @@ LOC  OBJECT CODE     LINE SOURCE TEXT
                       02345 
                       02346 
                       02347         END                       ; directive 'end of program'
-MPASM 5.87                         CS019.ASM   9-17-2025  14:00:07         PAGE 48
+MPASM 5.87                CS019-TWOWHEEL.ASM   9-17-2025  14:12:51         PAGE 48
 
 
 SYMBOL TABLE
@@ -2807,7 +2807,7 @@ DC                                00000001
 D_A                               00000005
 D_NOT_A                           00000005
 ELEV_EN                           00000004
-MPASM 5.87                         CS019.ASM   9-17-2025  14:00:07         PAGE 49
+MPASM 5.87                CS019-TWOWHEEL.ASM   9-17-2025  14:12:51         PAGE 49
 
 
 SYMBOL TABLE
@@ -2866,7 +2866,7 @@ NOT_W                             00000002
 NOT_WRITE                         00000002
 OERR                              00000001
 OPTIONVAL                         000000C8
-MPASM 5.87                         CS019.ASM   9-17-2025  14:00:07         PAGE 50
+MPASM 5.87                CS019-TWOWHEEL.ASM   9-17-2025  14:12:51         PAGE 50
 
 
 SYMBOL TABLE
@@ -2925,7 +2925,7 @@ RBIF                              00000000
 RC0                               00000000
 RC1                               00000001
 RC2                               00000002
-MPASM 5.87                         CS019.ASM   9-17-2025  14:00:07         PAGE 51
+MPASM 5.87                CS019-TWOWHEEL.ASM   9-17-2025  14:12:51         PAGE 51
 
 
 SYMBOL TABLE
@@ -2984,7 +2984,7 @@ T0CS                              00000005
 T0IE                              00000005
 T0IF                              00000002
 T0SE                              00000004
-MPASM 5.87                         CS019.ASM   9-17-2025  14:00:07         PAGE 52
+MPASM 5.87                CS019-TWOWHEEL.ASM   9-17-2025  14:12:51         PAGE 52
 
 
 SYMBOL TABLE
@@ -3043,7 +3043,7 @@ TRISC3                            00000003
 TRISC4                            00000004
 TRISC5                            00000005
 TRISC6                            00000006
-MPASM 5.87                         CS019.ASM   9-17-2025  14:00:07         PAGE 53
+MPASM 5.87                CS019-TWOWHEEL.ASM   9-17-2025  14:12:51         PAGE 53
 
 
 SYMBOL TABLE
@@ -3102,7 +3102,7 @@ adjust_backspin1                  000002C5
 adjust_bs1                        000002F9
 adjust_topspin                    0000034E
 adjust_topspin1                   00000303
-MPASM 5.87                         CS019.ASM   9-17-2025  14:00:07         PAGE 54
+MPASM 5.87                CS019-TWOWHEEL.ASM   9-17-2025  14:12:51         PAGE 54
 
 
 SYMBOL TABLE
@@ -3161,7 +3161,7 @@ dec_bot                           000001DD
 dec_bot_by_8                      000001E3
 dec_top                           000001C2
 dec_top_by_8                      000001C8
-MPASM 5.87                         CS019.ASM   9-17-2025  14:00:07         PAGE 55
+MPASM 5.87                CS019-TWOWHEEL.ASM   9-17-2025  14:12:51         PAGE 55
 
 
 SYMBOL TABLE
@@ -3220,7 +3220,7 @@ mult2                             0000004A
 mult3                             0000004B
 mult_lp                           000004E5
 mult_lp1                          000004FC
-MPASM 5.87                         CS019.ASM   9-17-2025  14:00:07         PAGE 56
+MPASM 5.87                CS019-TWOWHEEL.ASM   9-17-2025  14:12:51         PAGE 56
 
 
 SYMBOL TABLE
@@ -3279,7 +3279,7 @@ spin_a2d                          00000038
 stacks                            0000002D
 stackw                            0000002C
 status_temp                       00000021
-MPASM 5.87                         CS019.ASM   9-17-2025  14:00:07         PAGE 57
+MPASM 5.87                CS019-TWOWHEEL.ASM   9-17-2025  14:12:51         PAGE 57
 
 
 SYMBOL TABLE
@@ -3333,7 +3333,7 @@ wait_reset_lp                     000003CA
 waitlp                            0000045F
 waitlp1                           0000046B
 xmit_status                       00000525
-MPASM 5.87                         CS019.ASM   9-17-2025  14:00:07         PAGE 58
+MPASM 5.87                CS019-TWOWHEEL.ASM   9-17-2025  14:12:51         PAGE 58
 
 
 MEMORY USAGE MAP ('X' = Used,  '-' = Unused)
