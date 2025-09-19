@@ -797,17 +797,19 @@ tick3:
 	goto	feed_ok1		;MJZ ADDED LINE
 ;feed_ok1					;MJZ COMMENTED THIS LINE
 ;	goto	idle			;MJZ COMMENTED THIS LINE
-chk_feed_rate_type:				;MJZ ADDED LINE
-	btfss	feed_rate_type,0	;MJZ ADDED LINE, IF SET, MUST RESTRICT MAXIMUM FEED RATE FOR 2-LINE MODE
-	goto	feed_ok1			;MJZ ADDED LINE
-	movf	feed_a2d,w			;MJZ ADDED LINE
-	sublw	0x57				;MJZ ADDED LINE, MAXIMUM FEED RATE FOR 2-LINE MODE
-	btfsc	STATUS,C			;MJZ ADDED LINE, SKIP IF BORROW, IF FEED RATE HIGHER THAN 0X57 (first try was 0x40)
-	goto	feed_ok1			;MJZ ADDED LINE, OK IF FEED RATE ALREADY LESS THAN 0X57
-	movlw	0x57				;MJZ ADDED LINE
-	movwf	feed_a2d			;MJZ ADDED LINE, RESTRICT FEED RATE TO 0X57 (first try was 0x40) MAXIMUM FOR 2-LINE MODE
-feed_ok1:						;MJZ ADDED LINE
-	goto idle					;MJZ ADDED LINE
+chk_feed_rate_type:
+	btfss	feed_rate_type,0	; If set, must restrict max feed rate for 2-Line mode
+	goto	feed_ok1
+	movf	feed_a2d,w
+	sublw	0x61			; Max feed rate for 2-Line mode. This value must result in
+					; 121/255 (47.5%) PWM duty cycle for the feed motor which is
+					; the value calculated and measured in CS019B05 firmware.
+	btfsc	STATUS,C		; Skip if borrow, if feed rate higher than 0x61
+	goto	feed_ok1		; Ok if feed rate already less than 0x61
+	movlw	0x61
+	movwf	feed_a2d		; Restrict feed rate to 0x61 max for 2-Line mode
+feed_ok1:
+	goto idle
 
 tick4:
 	movlw	4
@@ -958,7 +960,7 @@ enable_feed:
 	movlw	INTCONVAL		; enable timer0 intr
 	movwf	INTCON
 	incf	soft_pwm,f		; indicate feed pwm active by setting soft_pwm
-	movlw	0x43			; got straight to 26% duty cycle
+	movlw	0x39			; go straight to 22% duty cycle
 	movwf	delta_s
 	goto	set_pwm_value
 
@@ -980,7 +982,7 @@ calc_feed:
 	movlw	0x14			; calc delta c
 	subwf	feed_a2d,w
 	movwf	delta_c			; delta_c = feed_a2d - 20
-	addlw	0x43			;  W = 67 + delta_c
+	addlw	0x39			;  W = 57 + delta_c
 	movwf	delta_s			;    save in delta_s
 	bcf	STATUS,C
 	rrf	delta_c,F		;  ( div by 2 )
@@ -996,9 +998,9 @@ calc_feed:
 	addwf	delta_s,F		;         + delta_c / 16
 	bcf	STATUS,C
 	rrf	delta_c,F		;  ( div by 32 )
+	movf	delta_c,W
+	addwf	delta_s,W		;         + delta_c / 32
 	bcf	STATUS,C
-	rrf	delta_c,W		;  ( div by 64 )
-	subwf	delta_s,W		;         - delta_c / 64
 
 	movwf	delta_s			; delta_s is now new feed pwm value
 	movf	pwmdesired,w
